@@ -1,0 +1,103 @@
+1.强制属性
+
+       name：默认locale下，web app的名称，显示在设备中app的名称，最大支持128字符
+
+       description：默认locale下，web app的简短描述（查询了一些资料，没发现它的功能）最大支持1024字符
+
+       default_locale:设置默认的locale，确定name，description的语言环境。
+
+2.可选属性
+
+       launch_path：指定web app被打开时，首先加载的东西，一般都是"/index.html".如果值缺省了（即"/"），将加载域名的东西。
+
+       version：web app的版本号，
+
+       type：确定这个app 和manifest如何被runtime解析，还有所使用的安全机制。它的值只能是下面三个中一个：
+
+             * web：正常的web app可以单独存在，在应用商店可以下载安装，并且会列举有限的权限。type 不指定时，默认是web。
+
+             * privileged：就像android Ios 一样单独存在的app，会在本地安装一个文件包。它需要通过应用商店的审核。
+
+             * certified：不用于第三发app中，属于系统级别的东西，例如系统设置，拨号器，电源管理等。类似android:sharedUserId 作用把。
+
+      icons：app icon，支持 16 x 16, 32 x 32, 48 x 48, 64 x 64, 128 x 128 and 256 x 256
+
+      developer:开发者相关的信息，包括开发者名称，及其URL。
+
+      installs_allowed_from：指定app可以从那些应用商店安装，"*"可以从任何地方安装," "无法从任何网站商店安装。
+
+      appcache_path：存放app cache manifest的绝对路径，当打开安装的web app时，cache.manifest会被解析。静态的一些资源会被存放到缓存中。
+
+      locales：重写一些locales特定的值，适应不同的语言。locales, installs_allowed_from,  default_locale是不能被重写的。如果locales被设置了，default_locale也必须被设置。
+
+      screen_size：包含两个属性min_width，min_height，分别设置app适应的最小宽度和高度（以像素为单位）。
+
+      required_features：包含app 能正确运行需要的一些强制属性。具体的值尚无定论。这个在app中可能用的很少。
+
+      orientation：锁定app的屏幕方向，和android orientation的功能一样。它的值必须是下面四个中的一个或多个：
+
+           * portrait-primary：锁定单一portrait显示。如果设备有明显的portrait，就是显示成portrait。如果设备从landscape顺时针旋转90度，app也显示portrait。
+
+           * landscape-primary：锁定单一landscape显示。如果设备有明显的landscape，就是显示成landscape。如果设备从portrait顺时针旋转90度，app也显示landscape。
+
+           * portrait-secondary：锁定单一portrait显示。如果设备有明显的portrait，就是显示成portrait。如果设备从landscape逆时针旋转90度，app也显示portrait。
+
+           * landscape-secondary：锁定单一landscape显示。如果设备有明显的landscape，就是显示成landscape。如果设备从portrait逆时针旋转90度，app也显示landscape。
+
+           * portrait：相当于["portrait-primary", "portrait-secondary"]这种组合模式。
+
+           * landscape：相当于["landscape-primary", "landscape-secondary"]组合模式
+
+     permissions：描述app 所需要的权限，android开发者对着部分就很熟悉了。只是的它格式和写法不同。下面给了example：
+
+[html] view plain copy
+"permissions": {
+  "contacts": {
+    "description": "Required for autocompletion in the share screen",
+    "access": "readcreate"
+    },
+  "alarms": {
+    "description": "Required to schedule notifications"
+  }
+}
+      permissions详细的请参照App_permissions。
+      fullscreen:设置app是否全屏，只能true 或者false。默认应该是false吧（有待验证）。
+
+      activities：指定这个app可以支持的web activities。activities命名没有什么讲究。下面给出个例子：
+
+[html] view plain copy
+"activities": {
+      "share": {
+        "filters": {
+          "type": ["image/png", "image/gif"]
+        }
+        "href": "/share.html",
+        "disposition": "window"
+      }
+    }
+      关于activities中的三个属性filters, href,disposition andreturnValue请参考 Activity handler description。
+       redirects：针对 privileged 或 certified类型 app做第三方认证。从第三方认证后需要重定向当前app URL。但是privileged 或 certified类型 app是没有可以使用的web URL，所以它只能重定向到app 内部的URL。下面给个exanple：
+
+[html] view plain copy
+"redirects": [
+  {"from": "http://mydomain.com/oauth2/flow.html",
+    "to": "/redirects/redirect.html"},
+  {"from": "http://mydomain.com/oauth2/dialogs_end.html",
+    "to": "/redirects/dialogs_end.html"}
+]
+       origin：针对 privileged 或 certified类型 app的属性，功能之一就是很容易通过类似的OAuth ， Persona等认证。格式是app://<UUID>.example:
+
+[html] view plain copy
+"origin": "app://my-app.com"
+   messages：捕获系统消息作出的反映，example：
+
+[html] view plain copy
+"messages": [
+  { "telephony-new-call": "/dialer/index.html#keyboard-view" },
+  { "bluetooth-dialer-command": "/dialer/index.html#keyboard-view" },
+  { "headset-button": "/dialer/index.html#keyboard-view" },
+  { "notification": "/dialer/index.html#keyboard-view" },
+  { "alarm": "/facebook/fb_sync.html" }
+]
+   上面的例子中，当接受的电话打进请求消息时，会弹出keyboard-view，以便用会作出接听，挂断的操作。
+   chrome：在屏幕底部添加一个导航栏，对于没有返回按钮的app，可以快速增加一个导航栏。

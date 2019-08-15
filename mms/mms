@@ -1,0 +1,121 @@
+1.MmsService.js
+  send: function // gecko
+    // check aParams receivers subject smil attachments is valid
+      let mmsConnection = gMmsConnections.getConnByServiceId(serviceId); //获取mmsConnection
+      let savableMessage = {};
+      let errorCode = this.createSavableFromParams(mmsConnection, aParams,savableMessage);//将MmsParameters转换为数据库可保存的消息。
+      gMobileMessageDatabaseService.saveReceivedMessage//保存数据库
+      if (!Components.isSuccessCode(aRv)) {
+        this.broadcastSentFailureMessageEvent(mmsMessage);//失败，发送通知
+      }
+
+      if (DEBUG) debug("Saving sending message is done. Start to send.");// 保存数据成功，开始发送
+
+      Services.obs.notifyObservers(mmsMessage, kSmsSendingObserverTopic, null);//
+
+      if (errorCode !== Ci.nsIMobileMessageCallback.SUCCESS_NO_ERROR) {
+        if (DEBUG) debug("Error! The params for sending MMS are invalid.");
+        sendTransactionCb(mmsMessage, errorCode, null);
+        return;
+      } // 判断params Radio RIL service is not active to send MMS retrun
+
+      // This is the entry point starting to send MMS.
+      let sendTransaction;
+      try {
+        sendTransaction =
+          new SendTransaction(mmsConnection, mmsMessage.id, savableMessage,
+                              savableMessage["deliveryStatusRequested"]);//开始发送的入口
+
+            if (!gMmsTransactionHelper.checkMaxValuesParameters(msg)) {//"Check max values parameters
+
+        SendTransaction：sendTransaction.run //发送
+          this.send(retryCallback);// This is the entry point to start sending.
+            gMmsTransactionHelper.sendRequest //
+              let mmsStatus = gMmsTransactionHelper.translateHttpStatusToMmsStatus
+
+        "gMmsTransactionHelper"：gMmsTransactionHelper：
+          sendRequest: function//Send MMS request to MMSC.
+            cancellable.isAcquiringConn = !mmsConnection.acquire((connected, errorCode)
+              acquire: function //function MmsConnection
+
+                init: function() {
+                 Services.obs.addObserver(this, kNetworkConnStateChangedTopic,false);
+                 Services.obs.addObserver(this, NS_XPCOM_SHUTDOWN_OBSERVER_ID, false);
+                },//注册监听network-connection-state-changed
+
+
+                if (!this.connected) {
+                  this.pendingCallbacks.push(callback);// If the MMS network is not yet connected, buffer the MMS request and try to setup the MMS network first.
+                    if (isRadioOff(this.serviceId) && !isWifiCallingAvailable(this.serviceId)) {
+                      if (DEBUG) debug("Error! Radio is disabled when sending MMS.");
+                      errorStatus = _HTTP_STATUS_RADIO_DISABLED;
+                    } else if (this.getCardState() != Ci.nsIIcc.CARD_STATE_READY) {
+                      if (DEBUG) debug("Error! SIM card is not ready when sending MMS.");
+                      errorStatus = _HTTP_STATUS_NO_SIM_CARD;
+                    }
+
+                  if (DEBUG) debug("acquire: buffer the MMS request and setup the MMS data call.");
+                  this.radioInterface.setupDataCallByType(Ci.nsINetworkInfo.NETWORK_TYPE_MOBILE_MMS);//设置datacall mms type 
+
+                  DATA_CALL_TRACKER:SetupDataCall //DataCallTracker.cpp::SetupDataCall: -> SetupDataCall :: Initiating data call for apn '3gwap'
+                  RequestSetupDataCall //RIL.cpp::RequestSetupDataCall: -> [SUB0] [0791]> RIL_REQUEST_SETUP_DATA_CALL radioTech=16, profile=0, apn=3gwap, user=(null), password=(null), authType=0, protocol=IP, usrObj=aec528b0
+
+
+                    observe: function //监听到网络状态变化
+                      case kNetworkConnStateChangedTopic: {
+                        if (!(subject instanceof Ci.nsIRilNetworkInfo)) {
+                        return;
+                        }// The network info for MMS connection must be nsIRilNetworkInfo.
+
+                        this.setApnSetting(networkInfo);// Set up the MMS APN setting based on the connected MMS network, which is going to be used for the HTTP requests later.
+
+                        this.networkInfo = networkInfo;// Cache connected network info.
+
+                        this.flushPendingCallbacks(_HTTP_STATUS_ACQUIRE_CONNECTION_SUCCESS);//this.pendingCallbacks.push(callback)
+
+                          let connected = (status == _HTTP_STATUS_ACQUIRE_CONNECTION_SUCCESS);
+                          callback(connected, status);
+
+                        cancellable.isAcquiringConn = !mmsConnection.acquire((connected, errorCode) => {//返回回调函数
+                          if (!url) {
+                            url = mmsConnection.mmsc;
+                          }        // MMSC is available after an MMS connection is successfully acquired.
+                            let startTransaction = netId => {  // if (DEBUG) debug("sendRequest: register proxy filter to " + url);
+                              cancellable.xhr = this.sendHttpRequest //
+                                let xhr = Cc["@mozilla.org/xmlextras/xmlhttprequest;1"].createInstance(Ci.nsIXMLHttpRequest);
+                                  xhr.onreadystatechange//
+                                    xhr.send(istream);// Send request
+                                      translateHttpStatusToMmsStatus: function//httpStatus HTTP_STATUS_OK
+                                        let response = MMS.PduHelper.parse(data, null);
+                                          callback(responseStatus, response);//      this.send(retryCallback);
+                                            let retryCallback =
+
+
+    sendTransactionCb //function MmsService() //最终调用
+        if (!isSentSuccess) {
+          if (DEBUG) debug("Sending MMS failed.");
+          aRequest.notifySendMessageFailed(aErrorCode, mmsMessage);
+          this.broadcastSentFailureMessageEvent(mmsMessage);
+          return;
+        }
+
+        if (DEBUG) debug("Sending MMS succeeded.");
+
+        // Notifying observers the MMS message is sent.
+        this.broadcastSentMessageEvent(mmsMessage);
+
+        // Return the request after sending the MMS message successfully.
+        aRequest.notifyMessageSent(mmsMessage);
+
+
+2.receive
+  receiveWapPush //接受到一条 mms 的消息时,首先会收到一个包含 M-Notification.ind 的 pdu,体现在 receiveWapPush()函数中,
+  this.handleNotificationIndication(options.serviceId, msg);//来到这个函数以后,首先要判断是否 transactionId 是已经存在的,如果是则表示是重复信息,不再继续存储。
+    retrievalMode = Services.prefs.getCharPref(kPrefRetrievalMode);//获取系统定义 Mms 的获取模式,是手动获取还是自动获取,不同获取模式对应的协议规则不同。
+      let mmsConnection = gMmsConnections.getConnByServiceId(serviceId);//建立数据链接。
+      let savableMessage = this.convertIntermediateToSavable(mmsConnection,notification,retrievalMode);//将收到的通知转化成数据库可以存储的状态。
+
+
+      //开始向 mms proxy-relay 读取这条彩信,并且在成功获取到彩信内容后执行相应的 retrieveMessageCallback 函数做最后的数据处理。
+        this.retrieveMessage(mmsConnection,url,(aMmsStatus, aRetrievedMsg) =>this.retrieveMessageCallback(mmsConnection,wish,savableMessage,aMmsStatus,aRetrievedMsg),domMessage);
+      //这个函数首先通知用户目前处于 retreive 彩信的状态,需要 ui 上做相应的相应。然后向 mms proxy-relay 发送一个 Wsp/Http 的 Get 请求,请求获取一个 url 的 mms 彩信内容

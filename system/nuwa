@@ -1,0 +1,111 @@
+nuwa进程类似于android内的zygote进程，需要启动一个应用时，nuwa会预先fork一个进程出来，该进程与父进程(nuwa)共享了某些资源（代码段,已打开文件描述符等），之后会加载应用的html，变成需要启动的应用。
+使用nuwa预先创建的空壳进程，能够加快应用启动速度。
+
+以下分析nuwa进程的创建以及初始化：
+1
+main()                   (b2g/app/B2GLoader.cpp)
+    |
+    |-RunProcesses
+              |
+              |-fork
+              |
+              |-XRE_ProcLoaderServiceRun            (nuwa process)    (ipc/glue/ProcessUtils_linux.cpp)
+              |                   |
+              |                   |-mozilla::ipc::ProcLoaderServiceRun
+              |                                  |
+              |                                  |-XRE_InitCommandLine
+              |                                  |
+              |                                  |-process = new ContentProcess(aPeerPid);
+              |                                  |
+              |                                  |-ProcLoaderChild *loaderChild = new ProcLoaderChild(aPeerPid);
+              |                                  |
+              |                                  |-loaderChild->Open(transport, aPeerPid, iothread->message_loop());
+              |                                  |
+              |                                  |-loop.Run();       // wait until received "load" command
+              |                                  |
+              |                                  |-XRE_DeinitCommandLine
+              |                                  |
+              |                                  |-sProcLoaderDispatchedTask->DoWork();
+              |                                                   |
+              |                                                   |-content_process_main(argc, argv);    // start nuwa. (ipc/contentproc/plugin-container.cpp)
+              |                                                                 |
+              |                                                                 |-isNuwa |= strcmp(argv[i], "-nuwa") == 0;
+              |                                                                 |
+              |                                                                 |-XRE_SetProcessType
+              |                                                                 |
+              |                                                                 |-PrepareNuwaProcess
+              |                                                                 |
+              |                                                                 |-NuwaAddFinalConstructor(&InitializeBinder, nullptr);
+              |                                                                 |
+              |                                                                 |-XRE_InitChildProcess  (toolkit/xre/nsEmbedFunctions.cpp)
+              |                                                                              |
+              |                                                                              |-XRE_InitCommandLine
+              |                                                                              |
+              |                                                                              |-uiLoopType = MessageLoop::TYPE_MOZILLA_CHILD;
+              |                                                                              |
+              |                                                                              |-MessageLoop uiMessageLoop(uiLoopType);
+              |                                                                              |
+              |                                                                              |-process = new ContentProcess(parentPID);
+              |                                                                              |
+              |                                                                              |-process->Init();
+              |                                                                              |
+              |                                                                              |-uiMessageLoop.MessageLoop::Run(); // run forever
+              |                                                                              |
+              |                                                                              |-XRE_DeinitCommandLine
+              |
+              |
+              |-XRE_ProcLoaderClientInit  (b2g process)
+              |
+              |-b2g_main
+                       |
+                       |-XRE_main
+                               |
+                               |-XREMain::XRE_main
+                                        |
+                                        |-XREMain::XRE_mainRun()
+                                                   |
+                                                   |-mozilla::ipc::ProcLoaderClientGeckoInit();
+
+那么，nuwa进程是如何创建一个新的进程的？
+b2进程启动时，会在初始化各种共享库后fork一个子进程(nuwa进程)，nuwa进程在开始运行后会创建一个ProcLoaderChild对象，并进入message loop进行等待。nuwa进程与b2g进程会进行ipc通讯，当接收到b2g进程发送来的”load”(RecvLoad)命令时，
+
+  virtual bool RecvLoad(InfallibleTArray<nsCString>&& aArgv,
+                        InfallibleTArray<nsCString>&& aEnv,
+                        InfallibleTArray<FDRemap>&& aFdsremap,
+                        const uint32_t& aPrivs,
+                        const int32_t& aCookie);
+
+nuwa进程会跳出等待状态，并调用
+
+content_process_main(argc, argv);
+1
+对nuwa进程进行初始化工作，最后又进入message loop循环处理各种任务。当接收到b2g进程发送的”fork”(“RecvFork”)命令，
+
+NuwaChild::RecvFork()
+1
+nuwa进程就会创建新的空壳进程。
+
+nsCOMPtr<nsIRunnable> runnable = NS_NewRunnableFunction(&NuwaFork);
+MOZ_ASSERT(runnable);
+MOZ_ALWAYS_TRUE(NS_SUCCEEDED(NS_DispatchToMainThread(runnable)));
+1
+2
+3
+NuwaFork()；
+1
+通过下面的图来了解b2g进程、nuwa进程间创建空壳进程的过程：
+
+
+https://blog.csdn.net/zembers/article/details/48519661
+
+
+* B2G加载器包括用于客户端（父）和服务器（子）之间通信的IPC协议PProcLoader。 b2g进程是客户端。它请求服务器使用给定的参数，env变量和文件描述符加载/启动Nuwa进程。
+
+ B2G加载程序调用ProcLoaderClientInit（）来初始化客户端b2g进程。然后调用b2g_main（）来启动b2g进程。
+ ProcLoaderClientGeckoInit（）由XRE_main（）调用，以创建PProcLoader的父actor，| ProcLoaderParent |，用于在Gecko初始化之后为稍后运行Nuwa进程的请求提供服务。
+ *
+ * ProcLoaderServiceRun（）由服务器进程调用。它启动一个IOThread和事件循环来提供| ProcLoaderChild |作为子actor的PProcLoader协议的实现。一旦收到load（）请求，它就会停止IOThread和事件循环，然后用给定的参数开始运行内容进程的main函数
+
+
+ *注意：服务器进程最多只能提供一个load（）请求。
+ * /

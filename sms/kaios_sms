@@ -1,0 +1,80 @@
+1.MobileMessageManager
+  nsCOMPtr<nsISmsService> smsService = do_GetService(SMS_SERVICE_CONTRACTID);
+2.而 SMS_SERVICE_CONTRACTID 定义在
+nsISmsService.idl
+  #define SMS_SERVICE_CONTRACTID "@mozilla.org/sms/smsservice;1"
+
+3.class SmsIPCService final : public nsISmsService
+                          , public nsIMmsService
+                          , public nsIMobileMessageDatabaseService
+                          , public nsIObserver //SmsIPCService.h
+SmsIPCService 继承自 nsISmsService,所以这里最终得到的是 SmsIPCService。
+
+4. 子进程 与 父进程 的通信通过 ipdl 进行,在 SmsIPCService 中有以下类似代码:
+SendRequest(const IPCSmsRequest& aRequest,
+nsIMobileMessageCallback* aRequestReply)
+{
+PSmsChild* smsChild = GetSmsChild();
+NS_ENSURE_TRUE(smsChild, NS_ERROR_FAILURE);
+SmsRequestChild* actor = new SmsRequestChild(aRequestReply);
+smsChild->SendPSmsRequestConstructor(actor, aRequest);
+return NS_OK;
+}
+这里通过 child 与 parent 进行通信。
+
+5.smsService.js 是 sms 的核心,围绕着这个类有:MobileMessageService(用来创建短
+信),MobileMessageDatabaseService(短信的存储), WappushManager. (处理 wappush 消息)
+6. 在 smsService.js
+XPCOMUtils.defineLazyGetter(this, "gRadioInterfaces", function() {
+let ril = { numRadioInterfaces: 0 };
+try {
+ril = Cc["@mozilla.org/ril;1"].getService(Ci.nsIRadioInterfaceLayer);
+} catch(e) {}
+let interfaces = [];
+for (let i = 0; i < ril.numRadioInterfaces; i++) {
+interfaces.push(ril.getRadioInterface(i));
+}
+return interfaces;
+});
+然后通过 gRadioInterfaces[aServiceId].sendWorkerMessage("sendSMS" ) 将信息发送到
+ril_worker
+
+
+
+
+
+
+
+
+
+1.SMS
+sqlite db
+/data/local/storage/permanent/chrome/idb/226660312ssm.files
+/data/local/storage/default/1021+f+app+++sms.gaiamobile.org
+
+
+2.
+请问KaiOS2.5是否有保存短信和彩信到SIM卡的功能 // 40680
+
+3."persist.locking.shift.tables""persist.single.shift.tables"
+GsmAlphabet::InitGsmTables //GsmAlphabet.cpp
+
+
+
+//Bug:26122 xiangpan.hou modified begin
+
+
+2.MMS
+
+2.1 mmsSizeLimitation
+  send 295KB ,recieve upto operator.//settings.js
+
+2.2  MMS Version:
+
+
+3.sms
+不支持主动保存短信到SIM卡中,class2还是会存到sim
+
+4.电话挂断了,彩信不会自动下载
+2G网下PS与CS不能共存
+PS都断掉了，相当于下载失败了，不会自动重连

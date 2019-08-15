@@ -1,0 +1,31 @@
+sudo apt-get install qemu libncurses5-dev gcc-arm-linux-gnueabi build-essential gdb-arm-none-eabi gcc-aarch64-linux-gnu eclipse-cdt
+
+export ARCH=arm
+export CROSS_COMPILE=arm-linux-gnueabi-
+make vexpress_defconfig
+
+如果是第一次运行 Qemu 虚拟机,那需要手工创建一个 console 节点。否则运行会提示错
+cd _install_arm32
+mkdir -p dev
+cd dev
+sudo mknod console c 5 1
+
+make -j8
+
+
+>>arch/arm/boot/zImage
+
+need dtbs
+make dtbs
+
+start:
+qemu-system-arm -nographic -M vexpress-a9 -m 1024M -kernel arch/arm/boot/zImage -append  "rdinit=/linuxrc console=ttyAMA0 loglevel=8" -dtb arch/arm/boot/dts/vexpress-v2p-ca9.dtb -S -s
+
+another termermine:
+arm-none-eabi-gdb --tui vmlinux
+
+
+target remote localhost:1234
+b do_fork
+c
+s

@@ -1,0 +1,221 @@
+一.web:
+
+1.office
+https://outlook.office.com/owa/?realm=kaiostech.com&exsvurl=1&ll-cc=1033&modurl=0&path=/mail/AAMkAGFhNDhkY2IxLTA4ZWYtNDBhZC05Nzc1LWUzNTllYTA5ZWU5YwAuAAAAAAA44UOBmrY7SYbO7k3+5souAQDSKzqJGiQPQK5N6p0jwCc6AAADznY4AAA=
+
+2.bugzilla
+https://bugzilla.kaiostech.com/
+
+3.gitlab
+https://git.kaiostech.com/
+
+4.share
+http://172.31.8.247:8080/share/page/context/shared/sharedfiles#filter=path%7C%2FAE%2520Team%2FTraining%2520Doc%7C&page=1
+xiangpan hou
+Aa123456
+
+5.office
+https://www.office.com
+xiangpan.hou@kaiostech.com
+Kaios6031
+
+6.webdev
+https://developer.mozilla.org/zh-CN/docs/Learn/Getting_started_with_the_web
+https://developer.mozilla.org/zh-CN/docs/Tools/WebIDE
+
+7.kaios
+http://tech.mozilla.com.tw/posts/3433/gonk-misc-a-bridge-from-aosp-build-system-to-building-firefox-os
+
+
+8.SFP/ftp spec
+ftp://ftp.kaiostech.com
+
+Account: kaipartner
+password: PoQw)(!@
+
+ftp://211.21.81.245
+kaios_all/kAioSOnly
+
+9.console
+https://developer.mozilla.org/zh-CN/docs/Tools/Web_Console/Helpers
+
+10.manifest.webapp
+https://blog.csdn.net/hunter___/article/details/7890971
+
+11.ux
+https://git.kaiostech.com/groups/ux
+
+12.password:
+okmwsx12345
+
+    
+二.Software:
+1.idea
+http://idea.lanyus.com/
+
+2.codedemo:
+https://c.runoob.com/codedemo/5347
+
+
+
+    
+三、API:
+
+1.create file
+-  let ThreadUI = {
++    var downloadTextFile = function(mobileCode) {
++        if(!mobileCode) {
++            mobileCode = '';
++        }
++        var sdcard = navigator.getDeviceStorage("sdcard");
++        var file   = new Blob(["This is a text file."], {type: "text/plain"});
++
++        var request = sdcard.addNamed(file, "smsfile.txt");
++
++        request.onsuccess = function () {
++            var name = this.result;
++            console.log('hpandroid File "' + name + '" successfully wrote on' +
++                ' the' +
++                ' sdcard storage area');
++        }
++
++// An error typically occur if a file with the same name already exist
++        request.onerror = function () {
++            console.log('hpandroid Unable to write the file: ' + this.error.name);
++        }
++
++//         var file = new File([mobileCode], "phonenumber.txt", { type: "text/plain;charset=utf-8" });
++//
++//         console.log("hpandroid file is create "+file.name);
++// //        saveAs(file);
++    }
+
+manifest.app
+"device-storage:sdcard":{ "access": "readwrite" }
+https://developer.mozilla.org/zh-TW/docs/WebAPI/Device_Storage
+
+
+四.
+settings
+gaia/build/common-settings.json
+
+language
+locales/es-US/shared/date/date.properties //other language
+shared/locales/date/date.en-US.properties //english
+
+
+
+
+    
+五、Command
+1.
+adb shell setprop persist.sys.gaia_reload 1
+adb shell setprop persist.sys.gaia 0 for gc 1 tct
+
+2.vlog
+adb shell
+setprop persist.radio.adb_log_on 1
+setprop persist.log.tag.ril VERBOSE
+reboot
+
+
+2.get brightness
+adb shell
+cd sys/class/leds/lcd-backlight
+cat brightness
+
+echo 255 >/ sys/class/leds/lcd-backlight/brightness
+
+echo 0 >/ sys/class/leds/lcd-backlight/brightness
+
+3.kernel
+# kernel休眠
+adb shell echo mem > /sys/power/state
+# kernel唤醒
+adb shell echo on > /sys/power/state
+
+4.adb shell下：
+dmesg:终端中显示kernel中printk消息
+cat /proc/kmsg ：持续输出
+getevent：显示TP、按键等底层事件信息
+top: 显示各进程占用cpu情况，RSS,VSS, PID等信息
+b2g-ps:显示b2g各应用进程名称和ID, VSIZE, RSS等信息
+b2g-ps --oom: 除了显示b2g-ps中的信息，还有应用进程的    OOM_ADJ值。
+b2g-info : 查看系统的内存使用情况等
+getprop:显示系统属性
+getprop prop:查询系统属性prop的值
+setprop:设置系统属性（部分可写）。 如
+“setprop prop value” 设置系统属性prop的值为value
+stop b2g: 终止b2g
+start b2g: 启动b2g
+netcfg： 显示网络连接状态
+kill -9/-11 PID ：杀死进程PID的应用
+
+
+
+
+    
+十、Code:
+  receives mozChromeEvent and detects which key is up/down by e.detail.type
+  fires new events for other system app module to listen.
+  HardwareButtons.prototype.handleEvent // system/hardwarebuttons.js
+
+1.https://developer.mozilla.org/zh-TW/docs/WebAPI/Device_Storage
+Create file in sdcard:
+  var sdcard = navigator.getDeviceStorage("sdcard");
+  var file   = new Blob(["This is a text file."], {type: "text/plain"});
+  var request = sdcard.addNamed(file, "my-file.txt");
+permission in manifest.webapp:
+    "permissions": {
+    "storage":{},
+    "device-storage:sdcard":{ "access": "readwrite" }
+  }
+sdcard path:/data/usbmsc_mnt/
+Note: if you change manifest.webapp in apps, you should factory reset the phone, as b2g init saved some information from manifest.webapp
+
+2.nsstring
+nsAutoCString url;
+[url = %s],url.get();
+
+nsAString aStr;
+char *cstr = ToNewUTF8String(aStr);
+%s,cstr
+
+
+
+    
+十一.debug
+1.open ril
+adb root
+adb shell
+setprop persist.radio.adb_log_on 1
+setprop persist.log.tag.ril  VERBOSE
+setprop ril.debugging.enabled 1
+setprop  persist.data.qmi.adb_logmask  3
+adb reboot
+
+2.open http
+adb root
+adb shell
+setprop kaios.log.enable 1
+setprop kaios.log.filter timestamp,nsHttp:5,nsSocketTransport:5,nsHostResolver:5
+stop b2g
+start b2g
+adb logcat -b main -b radio > gu.txt
+
+十二.add app:
+  gaia/build/config/phone/apps-production.list
+  gaia/build/config/phone/apps-production-debug.list
+
+
+    
+bug comment:
+
+Dears:
+  This is not a bug,As we confirmed with our UX Team in Taipei,Our Kaios current behavior is this. 
+
+  Your Project code maybe is different from our kaios native code. 
+As We provide the solution. The specific code logic may require you to implement it according to your own project code.
+
+  Any questions please contact me directly, TKS!
+KaiOS.FRK Shanghai

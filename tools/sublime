@@ -1,0 +1,14 @@
+mothed
+
+2、然后 ctrl+shift+p ，输入install package；
+
+3、然后 输入BracketHighlighter，回车开始安装；
+
+4、打开 Preference –> Package Settings –> Bracket Highlighter –> Bracket Settings Default
+
+5、ctrl+f 找到 “high_visibility_style”: “outline” 这一行。将outline修改为solid保存。
+
+可设置的参数：solid - 实线；outline - 轮廓；underline - 下划线 
+sublime3 支持更多的参数：thin_underline - 细下划线；squiggly - 曲线；stippled - 点画
+
+6、重启sublime生效。

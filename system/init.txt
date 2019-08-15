@@ -1,0 +1,215 @@
+1.init:
+init进程启动(init.b2g.rc)
+# service b2g /system/bin/b2g.sh -> // system/core/init/init.cpp
+  exec $COMMAND_PREFIX "$B2G_DIR/b2g" -> // system/bin/b2g.sh set the environment of the b2g process and start it
+  /system/b2g/b2g //start b2g，run /system/b2g/b2g，entry:gecko/b2g/app/B2GLoader.cpp
+  |-main -> // gecko/b2g/app/B2GLoader.cpp
+  |
+  |-FdArray reservedFds;
+  |
+  |-ReserveFileDescriptors(reservedFds); // Keep 5 file descriptors before loading the library file (starting with STDERR_FILENO+1)
+  |
+  |-bool ok = LoadStaticData(argc, argv);
+  |-// Load various data that can be shared between processes (mainly load various shared libraries such as libxul, load xpt information of various modules from Omnijar files), which can save some memory
+  |
+  |-RunProcesses -> // Fork and run parent and child process
+    |
+    |-pid_t pid = fork(); -> // Start the fork process. Father is the b2g process, son is the nuwa process
+    |
+    |-XRE_ProcLoaderServiceRun -> // The Nuwa process
+    |
+    |-b2g_main -> // parent(b2g) process)
+    |    |
+    |    |-main -> // (b2g/app/nsBrowserApp.cpp)
+    |      |
+    |      |-android::ProcessState::self()->startThreadPool // thread pool
+    |      |
+    |      |-(void)setsid(); // useful for profiling
+    |      |
+    |      |-result = do_main(argc, _argv); -> // main result
+    |        |
+    |        |-do_main -> // do
+    |          |
+    |          |-mozilla::StartBootAnimation(); // Start boot animation
+    |          |
+    |          |-XRE_main
+    |              |
+    |              |-XREMain::XRE_main -> // gecko/toolkit/xre/nsAppRunner.cpp
+    |                |
+    |                |-mAppData = new ScopedAppData(aAppData); //
+    |                |
+    |                |-XRE_mainInit() //
+    |                |
+    |                |-XRE_mainStartup
+    |                |
+    |                |-rv = mScopedXPCOM->Initialize();
+    |                    |
+    |                    |-NS_InitXPCOM2 // xpcom/build/XPCOMInit.cpp
+    |                      |
+    |                      |-sMessageLoop = new MessageLoopForUI(MessageLoop::TYPE_MOZILLA_PARENT); // thread gecko
+    |                      |
+    |                      |-UniquePtr<BrowserProcessSubThread> ioThread = MakeUnique<BrowserProcessSubThread>(BrowserProcessSubThread::IO);
+    |                      |
+    |                      |-ioThread->StartWithOptions //
+    |                      |
+    |                      |-rv = nsThreadManager::get()->Init(); // Establish the main thread
+    |                      |
+    |                      |-rv = nsTimerImpl::Startup(); // Set up the timer globals/timer thread
+    |                      |
+    |                      |-nsComponentManagerImpl::gComponentManager = new nsComponentManagerImpl(); //Create the Component/Service Manager
+    |                      |
+    |                      |-nsCycleCollector_init // Global cycle collector initialization.
+    |                      |
+    |                      |-nsCycleCollector_startup // And start it up for this thread too.
+    |                      |
+    |                      |-mozilla::SetICUMemoryFunctions() //
+    |                      |
+    |                      |-const char* jsInitFailureReason = JS_InitWithFailureDiagnostic(); // Initialize the JS engine.
+    |                      |
+    |                      |-rv = nsComponentManagerImpl::gComponentManager->Init(); -> // component manger init
+    |                          |
+    |                          |-nsComponentManagerImpl::Init() // gecko/xpcom/components/nsComponentManager.cpp
+    |                          |
+    |                          |-InitializeStaticModules();
+    |                          |
+    |                          |-RegisterModule
+    |                          |
+    |                          |-RefPtr<nsZipArchive> greOmnijar = mozilla::Omnijar::GetReader(mozilla::Omnijar::GRE);
+    |                          |
+    |                          |-RefPtr<nsZipArchive> appOmnijar = mozilla::Omnijar::GetReader(mozilla::Omnijar::APP);
+    |                          // The overall order in which chrome.manifests are expected to be treated
+    |                          // is the following:
+    |                          // - greDir
+    |                          // - greDir's omni.ja
+    |                          // - appDir
+    |                          // - appDir's omni.ja
+    |                          |
+    |                          |-RereadChromeManifests(false); ->
+    |                              |
+    |                              |-RegisterManifest -> // gecko/xpcom/components/nsComponentManager.cpp
+    |                                |
+    |                                |-DoRegisterManifest -> //
+    |                                |
+    |                                |-ParseManifest
+
+    |                    nsComponentManagerImpl::ManifestContract
+    |                    (void)XPTInterfaceInfoManager::GetSingleton();
+    |                    nsDirectoryService::gService->RegisterCategoryProviders();
+    |                    SharedThreadPool::InitStatics(); // Init SharedThreadPool (which needs the service manager)
+    |                    AbstractThread::InitStatics();  // Init AbstractThread.
+    |                    mozilla::scache::StartupCache::GetSingleton();
+    |                    mozilla::AvailableMemoryTracker::Activate();
+    |                    mozilla::Telemetry::Init();
+    |                    mozilla::HangMonitor::Startup();
+    |                    mozilla::BackgroundHangMonitor::Startup();
+    |                    sMainHangMonitor = new mozilla::BackgroundHangMonitor
+
+
+    |            rv = XRE_mainRun(); -> //
+    |              mozilla::ipc::ProcLoaderClientGeckoInit();
+    |              //initialize some common services
+    |              rv = mScopedXPCOM->SetWindowCreator(mNativeApp);
+    |              MOZ_CRASHREPORTER // tell the crash reporter to also send the release channel
+    |              startupNotifier->Observe(nullptr, APPSTARTUP_TOPIC, nullptr);
+    |              nsCOMPtr<nsIAppStartup> appStartup(do_GetService(NS_APPSTARTUP_CONTRACTID));
+    |              mDirProvider.DoStartup();
+    |              rv = cmdLine->Init
+    |              obsService->NotifyObservers(cmdLine, "command-line-startup", nullptr); // observe cmdline
+    |              SaveStateForAppInitiatedRestart //
+    |              rv = appStartup->CreateHiddenWindow(); //
+    |              obsService->NotifyObservers(nullptr, "final-ui-startup", nullptr);
+    |              (void)appStartup->DoneStartingUp(); //
+    |              rv = cmdLine->Run(); //
+    |              cmdLine->Run(); -> // gecko/toolkit/components/commandlines/nsCommandLine.cpp
+    |                rv = EnumerateValidators(EnumValidate, nullptr);
+    |                rv = EnumerateHandlers(EnumRun, nullptr);
+    |                  EnumRun -> //
+    |                    aHandler->Handle(aThis); //first page will be loaded in here
+
+    |              mNativeApp->Enable()
+    |              rv = appStartup->Run(); -> //
+    |                run -> // gecko/toolkit/components/startup/nsAppStartup.cpp
+    |                  nsresult rv = mAppShell->Run(); ->
+    |                    run -> // gecko/widget/gonk/nsAppShell.cpp->widget/nsBaseAppShell.cpp
+    |                      MessageLoop::current()->Run();  // run forever~~~~~
+    |
+    |
+    |
+    |
+    |
+    |-XRE_ProcLoaderServiceRun -> // The Nuwa process
+        |
+        |-XRE_ProcLoaderServiceRun
+          |
+          |-mozilla::ipc::ProcLoaderServiceRun // (ipc/glue/ProcessUtils_linux.cpp)
+            |
+            |-nsresult rv = XRE_InitCommandLine(aArgc, _argv);
+            |
+            |-process = new ContentProcess(aPeerPid);
+            |
+            |-ChildThread *iothread = process->child_thread();
+            |
+            |-ProcLoaderChild *loaderChild = new ProcLoaderChild(aPeerPid);
+            |
+            |-loaderChild->Open(transport, aPeerPid, iothread->message_loop());
+            |
+            |-loop.Run(); // wait until received "load" command
+            |
+            |-XRE_DeinitCommandLine();
+            |
+            |-ProcLoaderRunnerBase *task = sProcLoaderDispatchedTask;
+            |-int ret = task->DoWork();
+              |
+              |-int ret = content_process_main(argc, argv); // Start Nuwa (main function)
+                |
+                |-content_process_main(int argc, char* argv[]) // gecko/ipc/contentproc/plugin-container.cpp
+                |
+                |-isNuwa |= strcmp(argv[i], "-nuwa") == 0;
+                |
+                |-XRE_SetProcessType(argv[--argc]);
+                |
+                |-PrepareNuwaProcess();
+                |
+                |-nsresult rv = XRE_InitChildProcess(argc, argv, loader);
+                  |
+                  |-XRE_InitChildProcess // gecko/toolkit/xre/nsEmbedFunctions.cpp
+                    |
+                    |-nsresult rv = XRE_InitCommandLine(aArgc, aArgv);
+                    |
+                    |-uiLoopType = MessageLoop::TYPE_MOZILLA_CHILD; // Content processes need the XPCOM/chromium frankenventloop
+                    |
+                    |-return XRE_DeinitCommandLine();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ * How does B2G Loader Work?
+ *
+ *  <<parent process>>      <<child process>>
+ *   ProcLoaderParent -----> ProcLoaderChild
+ *         ^                       |
+ *         | load()                | content_process_main()
+ *         |                       V
+ *     ProcLoaderClient      Nuwa/plugin-container
+ *         ^
+ *         | ProcLoaderLoad()
+ *        ...
+ *     ContentParent
+
+code:kaios:
+https://owo.codes/otocyon/otocyon/commit/0af5b943b6125c34be8b9c1b64dfffc652cd0ba7
+

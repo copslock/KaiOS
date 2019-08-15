@@ -1,0 +1,14 @@
+note:
+1.
+rilLibPath /system/vendor/lib/libril-qc-qmi-1.so
+  vendor/qcom/proprietary/qcril/qcril_qmi/qcril_qmi.mk
+  LOCAL_MODULE:= libril-qc-qmi-1
+
+01-24 16:24:53.609   298   802 D hpandroid: RIL.cpp::Run: -> [SUB0] Connecting to rild socket qmux_radio/rild_oem0
+01-24 16:24:53.609   298   802 D hpandroid: RIL.cpp::Run: -> [SUB0] Connected to socket qmux_radio/rild_oem0
+01-24 16:24:53.609   298   803 D hpandroid: RIL.cpp::Run: -> [SUB0] Connecting to rild socket rild
+01-24 16:24:53.609   298   803 D hpandroid: RIL.cpp::Run: -> [SUB0] Connected to socket rild
+01-24 16:24:53.629   298   806 D hpandroid: RIL.cpp::Run: -> [SUB1] Connecting to rild socket qmux_radio/rild_oem1
+01-24 16:24:53.629   298   806 D hpandroid: RIL.cpp::Run: -> [SUB1] Connected to socket qmux_radio/rild_oem1
+01-24 16:24:53.639   298   807 D hpandroid: RIL.cpp::Run: -> [SUB1] Connecting to rild socket rild2
+01-24 16:24:53.639   298   807 D hpandroid: RIL.cpp::Run: -> [SUB1] Connected to socket rild2

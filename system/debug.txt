@@ -1,0 +1,77 @@
+
+kernel:
+
+adb shell cat proc/kmsg
+
+adb shell dmesg
+
+一.crash report
+How to get crash report:
+1. Build symbols (symbols will put into "objdir-gecko/dist/crashreporter-symbols/“):
+$ . setup.sh && make buildsymbols
+
+2. Pull raw file of minidump, dumpfile (xxx.dmp) and extra file will save under “/data/b2g/mozilla/Crash Reports/pending/” if you didn't send them to server
+
+3. Using minidump_stackwalk to parse dump raw file to readable dump_result.txt
+$ ./minidump_stackwalk dumpfile objdir-gecko/dist/crashreporter-symbols/ > dump_result.txt
+bug:62951
+
+crash in phone:
+data/b2g/mozilla/Crash\ Reports/pending
+
+二.codedump:
+1. CONFIG_COREDUMP=y msm8909-perf_defconfig  need rebuild boot
+./build.sh bootimage
+
+2. adb shell  setprop persist.debug.coredump all/b2g
+
+3. echo "/data/core/%e.%p.%t.core" > /proc/sys/kernel/core_pattern
+
+4. echo "1" > /proc/sys/fs/suid_dumpable
+
+5. ulimit -c unlimited
+
+可以直接在Android 配置中init.rc中写入,就可以省略3.4
+setrlimit 4  -1 -1
+
+mkdir /data/core 0777 system system
+
+write /proc/sys/kernel/core_pattern  /data/core/%e.%p.%t.core
+
+//write /proc/sys/kernel/core_pattern  /data/core/core.%e.%p
+
+在PC上使用arm-linux-gdb读出coredump文件，恢复程序死机时的现场：
+arm-linux-gdb --core=core.xxx.xxx
+(gdb)file xxx
+(gdb)bt
+就会列出死机时的函数调用关系
+
+Android:
+http://www.mamicode.com/info-detail-1162770.html
+
+debug:
+https://source.android.com/devices/tech/debug/native-crash
+
+kernel:
+https://source.android.com/devices/architecture
+
+二.signal
+send signal to phone
+kill -11 ps
+
+SIGABRT 6 通过C函数abort()发送；为assert()使用
+
+SIGKILL 9 迅速完全终止进程；不能被捕获
+
+SIGFPE 8 浮点数运算错误，如除0操作
+
+SIGSEGV 11 段地址错误，例如空指针、野指针、数组越界等
+
+SIGPIPE 13 管道错误，例如向没有reader的管道中写,linux中socket断掉后继续写
+
+SIGILL 4 非法指令，例如损坏的可执行文件或代码区损坏
+
+SIGBUS 7 不存在的物理地址，更多为硬件或系统引起
+
+
+hplog(" const char* name %s ",(void*)name);

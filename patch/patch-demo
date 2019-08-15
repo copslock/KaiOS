@@ -1,0 +1,162 @@
+
+test
+
+2:25 PM
+ril.sms.requestStatusReport.enabled
+sms
+
+
+/gecko/b2g/chrome/content/settings.js 
+
+http://172.31.16.49:8080/source/xref/gecko/b2g/chrome/content/settings.js?r=ffa80265#697
+
+
+
+发patch
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git stash 
+Saved working directory and index state WIP on (no branch): a361417 Merge branch 'browser_2.5' into 'master'
+HEAD is now at a361417 Merge branch 'browser_2.5' into 'master'
+=====================================================================================
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git branch -av
+* (HEAD detached at kaios_2_5_quoin_20171017_2) a361417 Merge branch 'browser_2.5' into 'master'
+  remotes/feature-phone/master abb4fdf Merge branch 'bug-18286' into 'master'
+  remotes/m/master             -> feature-phone/master
+
+===================================================================================== 
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git checkout feature-phone/master 
+Previous HEAD position was a361417... Merge branch 'browser_2.5' into 'master'
+HEAD is now at abb4fdf... Merge branch 'bug-18286' into 'master'
+=====================================================================================
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git status .
+HEAD detached at feature-phone/master
+nothing to commit, working directory clean
+=====================================================================================
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git checkout -b bug-16305
+Switched to a new branch 'bug-16305'
+=====================================================================================
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git stash pop
+Auto-merging scss/components/_toaster.scss
+On branch bug-16305
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working directory)
+
+	modified:   scss/components/_toaster.scss
+
+no changes added to commit (use "git add" and/or "git commit -a")
+Dropped refs/stash@{0} (0504df1c1ab599f4d980a755800e14bd19c253ca)
+=====================================================================================
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git diff
+diff --git a/scss/components/_toaster.scss b/scss/components/_toaster.scss
+index f0d0449..c3d0348 100644
+--- a/scss/components/_toaster.scss
++++ b/scss/components/_toaster.scss
+@@ -54,7 +54,7 @@
+         white-space: nowrap;
+         text-overflow: ellipsis;
+         color: var(--color-gs70);
+-        line-height: unset;
++        line-height: 2.5rem;
+ 
+         &:not(:empty) {
+           margin-top: $toaster-gap / 2;
+
+=====================================================================================
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git add .
+
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git branch -v
+* bug-16305 abb4fdf Merge branch 'bug-18286' into 'master'
+=====================================================================================
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  去网站上fork:  https://git.kaiostech.com/feature-phone-apps/contact/
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git remote add origin https://git.kaiostech.com/yan.ai/system.git
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git remote -v
+feature-phone	ssh://git@172.31.8.251/feature-phone-apps/system (fetch)
+feature-phone	ssh://git@172.31.8.251/feature-phone-apps/system (push)
+my	git@git.kaiostech.com:yan.ai/my-qoin-2.5.git (fetch)
+my	git@git.kaiostech.com:yan.ai/my-qoin-2.5.git (push)
+origin	https://git.kaiostech.com/yan.ai/system.git (fetch)
+origin	https://git.kaiostech.com/yan.ai/system.git (push)
+=====================================================================================
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++add
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git commit -m "Bug 16305 - [System] Emotion notification opens up in extra large window. r=alive"
+[bug-16305 403f070] Bug 16305 - [System] Emotion notification opens up in extra large window. r=alive
+ 1 file changed, 1 insertion(+), 1 deletion(-)　b4c7d284fbc494e0aad663c4ebfe4cd51d9a9148
+=====================================================================================
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git branch -av
+* bug-16305                    403f070 Bug 16305 - [System] Emotion notification opens up in extra large window. r=alive
+  remotes/feature-phone/master abb4fdf Merge branch 'bug-18286' into 'master'
+  remotes/m/master             -> feature-phone/master
+=====================================================================================
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+sdduser@yai:/local/code/kaios-1026/KaiOS/apps/system$ git push origin bug-16305 
+Username for 'https://git.kaiostech.com': yan.ai@kaiostech.com
+Password for 'https://yan.ai@kaiostech.com@git.kaiostech.com': 
+Counting objects: 138, done.
+Delta compression using up to 4 threads.
+Compressing objects: 100% (73/73), done.
+Writing objects: 100% (138/138), 20.02 KiB | 0 bytes/s, done.
+Total 138 (delta 96), reused 102 (delta 62)
+remote: 
+remote: Create merge request for bug-16305:
+remote:   https://git.kaiostech.com/yan.ai/system/merge_requests/new?merge_request%5Bsource_branch%5D=bug-16305
+remote: 
+To https://git.kaiostech.com/yan.ai/system.git
+ * [new branch]      bug-16305 -> bug-16305
+
+
+最后一步， 上传link到bugzilla
+
+  <html>
+  <head>
+   <title> Redirect to pull request #207 </title>
+   <meta http-equiv="Refresh" content="2; url=https://git.kaiostech.com/feature-phone-apps/contact/merge_requests/207"/>
+  </head>
+  <body> Redirect to pull request #207 </body> 
+  </html
+
+
+//////kaios 台北提交代码参考/////////
+确保修改符合要求后，按照以下步骤操作(请大家在提交的过程中发现有遗漏的请补上):
+1.创建本地branch关联到远程分支:
+git checkout -b bug_9468 remotes/m/master
+注:bug_9468为当前处理的bug号，请以此来命名本地branch的名字
+   remotes/m/master为当前git使用的远程分支
+   创建完成后可以使用git branch查看是否创建成功. 
+   查看当前git的branch信息，可以通过
+   git branch -a 或者.repo/manifest.xml
+   
+
+2.把本地修改提交到git中.
+  修改或者添加文件使用git add <文件名>
+  删除使用 git rm <文件名>
+
+3.commit message:
+  请按照一下格式，修改自己的提交
+  git commit -m "Bug 9468 - Add gps_test for mmitest. r=Seinlin"
+
+4.在远端创建了一个分支来提交当前修改
+  此操作前，需要到git.kaiostech.com上fork出一个远程的个人git仓库，如果是master分支的可以直接fork到jrd
+  如：在git.kaiostech.com上登录个人帐号后，选择system_mmitest git，fork出来远程分支.
+  执行命令:
+  git remote add bug_9468 git@git.kaiostech.com:jrd/platform_system_mmitest.git
+  注:bug_9468为本地branch;  git@git.kaiostech.com:jrd/platform_system_mmitest.git为fork的地址.
+
+5.把修改push到远程分支上:
+  git push bug_9468 bug_9468:bug_9468
+  //bug_9468,第一个为远端branch， 第二个和三个为本地branch
+
+=====以上操作完成，可以在git.kaiostech.com上发现当前的修改提交, 
+     然后需要继续确认Merge Requests
+最终生成链接:https://git.kaiostech.com/lyf/platform_system_mmitest/merge_requests/1
+
+注：如果提交在review时被打回.
+   在如上述的本地bug_9468目录，直接对修改完成的代码执行。
+   git commit --amend                           //更新本地提交，保留changeid不变
+   git push -f bug_9468 bug_9468:bug_9468       //强制再次提交，可以在上次提交链接上继续查看
+
+
+
+    Bug 43908 - Add observer for time zone change when message is at background. r=weiwei.wu
+

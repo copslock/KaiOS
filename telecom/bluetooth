@@ -1,0 +1,70 @@
+
+_onDevicePicked // bluetooth::transfer_manager.js
+  |
+  |-BtContext.sendFile(targetDeviceAddress, blob) //
+    |
+    |-sendFile // bluetooth_context.js
+      |
+      |-this._defaultAdapter.sendFile(address, blob) //
+        |
+        |-SendFile //BluetoothAdapter.cpp
+          |
+          |-SendFile  // BluetoothServiceBluedroid.cpp
+          |  // Currently we only support one device sending one file at a time,
+          |  // so we don't need aDeviceAddress here because the target device
+          |  // has been determined when calling 'Connect()'. Nevertheless, keep
+          |  // it for future use.
+  |
+  |-this._postMessageToSystemApp(schedule); // transfer_manager.js
+    |
+    |-app.connect('bluetoothTransfercomms') // Post message object to system app
+      |
+      |- //
+      |    window.addEventListener('iac-bluetoothTransfercomms',
+      |this._onFilesSending.bind(this));
+        |
+        |_onFilesSending
+
+
+
+BluetoothAdapter::Enable // BluetoothAdapter.cpp
+  |
+  |-SetAdapterState
+    |
+    |-bs->EnableDisable //
+      |
+      |-EnableDisable // BluetoothService.cpp
+        |
+        |-StartStopBluetooth
+          |
+          |-StartBluetooth
+            |
+            |-nsresult rv = StartInternal(aRunnable);
+              |
+              |-StartInternal // BluetoothServiceBluedroid.cpp
+                |
+                |-StartGonkBluetooth
+                  |
+                  |-BluetoothService::AcknowledgeToggleBt
+                    |
+                    |-sBluetoothService->CompleteToggleBt
+                      |
+                      |-FireAdapterStateChanged
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

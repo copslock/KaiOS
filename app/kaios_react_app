@@ -1,0 +1,8 @@
+npm init
+npm i xxx -D
+
+package.json
+
+
+//install packge.json devDependencies
+yarn install

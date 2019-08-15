@@ -1,0 +1,162 @@
+1.Steps to config, build and flash:
+
+  $ git clone git@git.kaiostech.com:KaiOS/KaiOS.git
+
+  $ cd KaiOS
+
+  $ ./config.sh -c quoin_qwerty
+  //In Shanghai office
+  //Need to set REPO_URL to config
+  REPO_URL=git@172.31.8.251:git-repo.git ./config.sh -c quoin
+
+
+2.Code branch:
+
+MT6572:
+REPO_URL=git@172.31.8.251:git-repo.git GITREPO=git@git.kaiostech.com:KaiOS/manifests.git BRANCH=v2.5-dev ./config.sh -c modric_kk_3g
+
+7731e:
+REPO_URL=git@172.31.8.251:git-repo.git BRANCH=v2.5 ./config.sh -c pier2_kk_3G
+
+
+
+- this include repo init and repo sync
+
+- from next time, can use repo sync to sync and update source tree
+
+- See Appendix for SH/XA/NJ office
+
+  // See gaia/README.md to install nodejs & yarn
+  1.[build-bundle] Error: Node.js version mismatch. See README for more information.
+  install nodejs:
+  curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
+  Alternatively, for Node.js 10:
+  curl -sL https://deb.nodesource.com/setup_10.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+
+
+  2.yarn version mismatch
+  install yarn:
+  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+  echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+  Then you can simply:
+  sudo apt-get update && sudo apt-get install yarn
+
+  $ ./build.sh
+
+Fail:You are using version 4.1 of make.
+Solve:build/core/main.mk
+  ifeq (0,$(shell expr $$(echo $(MAKE_VERSION) | sed "s/[^0-9\.].*//") = 4.1))
+  endif
+
+Fail:(_nl_value_type_LC_TIME[0]))' failed.
+Solve:export LC_ALL=C
+
+
+
+
+  $ sudo ./flash.sh
+
+  * To sync from mirror server, set the following in ~/.gitconfig
+
+[url "ssh://git@172.31.8.251/KaiOS/"]
+
+  insteadof = ssh://git@git.kaiostech.com/KaiOS/
+
+[url "ssh://git@172.31.8.251/qct/"]
+
+  insteadof = ssh://git@git.kaiostech.com/qct/
+
+[url "ssh://git@172.31.8.251/quic/la/"]
+
+  insteadof = https://source.codeaurora.org/quic/la/
+
+[url "ssh://git@172.31.8.251/nxpgonk/"]
+
+  insteadof = https://github.com/nxpgonk/
+
+[url "ssh://git@172.31.8.251/feature-phone-apps/"]
+
+  insteadof = ssh://git@git.kaiostech.com/feature-phone-apps/
+
+[url "ssh://git@172.31.8.251/itriad/"]
+
+  insteadof = ssh://git@git.kaiostech.com/itriad/
+
+[url "ssh://git@172.31.8.251/"]
+
+  insteadof = ssh://git@git-sh.kaiostech.com/
+
+
+2.make
+  2.1 Building Gaia without re-bundling apps
+    `make install-gaia NO_BUNDLE=1` //gaia/README.md
+
+    NO_BUNDLE?=0
+  2.2 make install-gaia : 编译gaia，并将所有应用都push到手机中，不清除用户数据
+  2.3 make reset-gaia : 编译gaia，并将所有应用都push到手机中，同时更新所有的用户数据（settings值等）如果修改了应用的manifest.webapp时，使用该命令更新。
+
+  2.4 make instal-gaia APP=appName  : 单独编译应用appName，并将应用push到手机安装目录中
+
+调试C/C++代码
+device/qcom/b2g_common目录下执行：
+./run-gdb.sh attach PID
+
+单独编译gecko的c/c++代码并且刷机子上(机子刷的是本地变异的代码)，device/qcom/b2g_common目录下执行：
+./mozilla-b2g/scripts/fastxul.sh
+
+  2.5 add app
+  1.put the code under apps
+  2.add app to gaia/build/config/phone/apps-production-debug.list
+  push gaia/profile/webapps/xxx.gaiamobile.org/
+
+
+3.build version with store:
+  3.1 . download code with source.xml as attechment
+
+  3.2 . Create 3 files:
+
+    store_key.txt : cjiHqoAxB-MOcUY5UFgb
+
+    push_key.txt : mgw0CO6pH00g4MFNbjyY
+
+    metrics_key.txt: cjiHqoAxB-MOcUY5UFgb
+
+  3.3 .  modify gecko/b2g/app/b2g.js,
+
+        Change “apps.token.uri” to https://api.kaiostech.com/v3.0/applications/np9tbBL2sZPU07OUWHMy/tokens
+
+        add pref("device.commercial.ref", "GF2TF-VALTEST");
+
+        Change “dom.push.token.uri” to https://api.kaiostech.com/v3.0/applications/6r4Wb6xj7DWruk7ZTUEl/tokens
+
+        Change “metrics.token.uri” to https://api.kaiostech.com/v3.0/applications/np9tbBL2sZPU07OUWHMy/tokens
+
+  3.4 . touch .userconfig:
+
+      export KAI_APPS_KEY_FILE=/local/build/${JOB_NAME}/store_key.txt；
+      export KAI_PUSH_KEY_FILE=/local/build/${JOB_NAME}/push_key.txt；
+      export KAI_METRICS_KEY_FILE=/local/build/${JOB_NAME}/metrics_key.txt；
+
+  3.5 .  ./build.sh
+
+
+4.build error:
+  error.GitError: rev-parse: [Errno 2] No such file or directory: '/local/code/master-0815/KaiOS/apps/
+
+method:
+  export DISABLE_SOURCES_XML=true;
+
+reason:
+  gonk-misc/Android.mk
+  会根据repo下面的manifest去代码里面找各个仓库的当前commitID，整理一份maniefst出来，
+  放在out/target/product/msm8909_512/obj/DATA/sources.xml_intermediates/sources.xml这里，
+  就是daily版本里的source.xml的来源。
+  如果repo/manifests里面有的，代码里没有，这里就会报错
+
+5.REPO_URL=git@172.31.8.251:git-repo.git BRANCH=jio ./config.sh -c anchor_nfc
+
+6.android make fail:
+flex-2.5.39: loadlocale.c:130: nl_intern_locale_data: Assertion `cnt < (sizeof (nl_value_type_LC_TIME) / sizeof (_nl_value_type_LC_TIME[0]))' failed.
+method:
+  export LC_ALL=C

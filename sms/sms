@@ -1,0 +1,48 @@
+一.SMS简介
+1.SMS（Short Message Service） 短信息服务，
+  属于P2P（Point to Point）即端对端的服务，其业务流程就是从UE端到SC，再从SC到UE端的一个过程。
+
+  其中UE表示用户通讯设备，即手机端，SMS Service Center，简称SC，表示短消息中心。
+  UE端既是业务的起点，也是业务的终点，其主要负责与用户进行交互，及时响应用户和网络的请求，
+  而SC则起到了中继和转存
+
+2.sms业务的3gpp协议参考：
+  TS 24.011      Point-to-Point (PP) Short Message Service (SMS) support on mobile radio interface
+  TS 23.040      Technical realization of the Short Message Service (SMS)
+
+
+3.SMS采用存储转发方式，其承载通道为控制信令通道，故信息容量不大，
+
+  根据 GSM03.40 标准：每条短信最多发送 1120 位,即140 字节的内容(1120÷8=140一个字节占 8 位),
+而短信的长度是由编码格式决定的，如果发送纯英文字符,由于英文 ASCII 采用 7BitEncoding 7 位编码即GSM 的默认编码方式,
+所以1120 位的限额可以传送 1120÷7=160 个字符。
+一旦传送的字符中包含中文、日文、韩文等双字节字符,不论中文还是西文,不论全角还是半角,都必须采用 UCS2 （ utf-16 ） 2 个字节的 8 位编码,因此 1120÷8÷2=70
+个字符,即最多传送 70 个字
+UniCode 编码转换也比较简单，以中文为例，一个中文字符是两个字节，直接对高位字节和低位字节进行十六进制转换就可以了。如“欢迎”， UniCode 编码是 6B22 8FCE ，这同时也就是转换的结果，如果发送的串中有英文字符，那么在前面补全00，以保证一个字符对应两个字节。
+
+
+
+一. 短信
+短信是生活中很常用的功能,短信对大家来说也相当熟悉,但是有几点需要在这里提一下。
+
+SMS采用存储转发方式，其承载通道为控制信令通道，故信息容量不大，一条短信做多包含140个字节（160个字符或70个汉字）
+
+
+1. 短信是存储转发的工作,我们发出的短信是经过短信中心的存储转发,才被接收机所接收
+2. 我们的通信设备,也就是手机, 需要与短信中心进行交互,在收到短信时,是需要给短信中心回
+复 ACK 消息,当我们发出短信,短信中心,也需要给我们回复 ACK 消息,如果没有回复 ACK 消息,
+或回复 ACK 失败,会造成一些奇怪的问题,我们后面会详 细讲述。
+
+
+
+短信pdu解析
+https://blog.csdn.net/ceko_wu/article/details/7920607
+
+协议：
+https://blog.csdn.net/yu_shaojian/article/details/78811944
+
+数据库：
+https://blog.csdn.net/ceko_wu/article/details/8021133
+
+encode:
+https://en.wikipedia.org/wiki/GSM_03.38

@@ -1,0 +1,22 @@
+1.cs ps
+CS电弧交换，独占信道主要用于语音，直到通话结束才释放信道，供其他用户使用。
+PS分组交换（包交换），主要用于数据业务（上网之类），采用分组-转发机制，多用户共用信道资源，使得资源利用率大大提高。
+
+
+2.ServiceState // 保存SIM卡注册成功后电信运行商网路的一些基本服务信息.
+ServiceState//实体类的关键信息
+
+ServiceState.cpp
+  ServiceStateType //服务状态
+  RatType // radio 通讯技术
+
+ServiceStateTracker.cpp
+
+
+CUSTOM_RIL_UNSOL_ICC_GSM_RECORDS_LOADED //sim卡联系人加载完成
+
+/vendor/qcom/proprietary/b2g_telephony/icc/IccFileHandler.cpp
+  mPhone->NotifyStateChanged(CUSTOM_RIL_UNSOL_ICC_GSM_RECORDS_LOADED, in OnRecordLoaded()
+
+
+ApnSettingsManager //addapn

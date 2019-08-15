@@ -1,0 +1,3 @@
+::是运算符中等级最高的，它分为三种: 1)global scope(全局作用域符），用法（::name)
+2)class scope(类作用域符），用法(class::name)
+3)namespace scope(命名空间作用域符），用法(namespace::name) 他们都是左关联（left-associativity) 他们的作用都是为了更明确的调用你想要的变量，如在程序中的某一处你想调用全局变量a，那么就写成::a，如果想调用class A中的成员变量a，那么就写成A::a,另外一个如果想调用namespace std中的cout成员，你就写成std::cout（相当于using namespace std；cout）意思是在这里我想用cout对象是命名空间std中的cout（即就是标准库里边的cout） 他们算是C++中的基础，如果运用的好的话，你程序的出错率也许会降很多，o~~~~~~~~~ 1）表示“域操作符” 　　例：声明了一个类A，类A里声明了一个成员函数void f()，但没有在类的声明里给出f的定义，那么在类外定义f时， 　　就要写成void A::f()，表示这个f()函数是类A的成员函数。 　　（2）直接用在全局函数前，表示是全局函数 　　例：在VC里，你可以在调用API 函数里，在API函数名前加：： 　　（3）表示引用成员函数及变量，作用域成员运算符 　　例：System::Math::Sqrt() 相当于System.Math.Sqrt()

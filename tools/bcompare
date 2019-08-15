@@ -1,0 +1,7 @@
+1.破解
+
+cd .config/bcompare/
+ls
+BCSessions.xml  BCSessions.xml.bak  BCState.xml  BCState.xml.bak  IsPro  menu.ini  registry.dat
+
+rm -rf registry.dat

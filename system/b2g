@@ -1,0 +1,17 @@
+main // gecko/b2g/app/B2GLoader.cpp
+RunProcesses()
+
+  if (isChildProcess) {
+    if (getenv("MOZ_DEBUG_CHILD_PROCESS")) {
+      printf("\n\n hpandroid B2GLoader CHILDCHILDCHILDCHILD\n  debug me @ %d\n\n",getpid());
+      sleep(30);
+    }
+
+> root@android:/ # export MOZ_DEBUG_CHILD_PROCESS=1
+> root@android:/ # b2g.sh
+
+hpandroid B2GLoader CHILDCHILDCHILDCHILD\n  debug me
+
+SaveToEnv("XRE_PROFILE_PATH=");
+
+https://blog.csdn.net/zembers/article/details/48519661

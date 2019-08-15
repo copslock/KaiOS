@@ -1,0 +1,16 @@
+1.Theme
+option->preference->color->theme->import->theme
+
+2.show tab and space
+View->Visible Tabs and spaces
+
+
+
+2.Key Assignments
+View:project window(open/close project window)
+Symbol: Browse Local File Symbols...(lookup local file symbol)
+Navigation: Go Back(go back)
+Navigation: Go Forward(go forward)
+Symbol: Jump To Caller
+Symbol: Jump To Definition
+Search: Search Files...(ctrl+shift+f)

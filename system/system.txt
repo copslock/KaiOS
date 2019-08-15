@@ -1,0 +1,171 @@
+1.main()     (b2g/app/B2GLoader.cpp)
+init:
+|
+|-ReserveFileDescriptors
+|
+|-LoadStaticData
+|
+|-RunProcesses
+       |
+       |-fork
+       |
+       |-XRE_ProcLoaderServiceRun      (child(nuwa) process)
+       |
+       |-b2g_main               (parent(b2g) process) (b2g/app/nsBrowserApp.cpp)
+                |
+                |-android::ProcessState::self()->startThreadPool();
+                |
+                |-(void)setsid();
+                |
+                |-do_main
+                         |
+                         |-mozilla::StartBootAnimation();
+                         |
+                         |-XRE_main
+                               |
+                               |-XREMain::XRE_main
+                                      |
+                                      |-new ScopedAppData(aAppData);
+                                      |
+                                      |-XREMain::XRE_mainInit
+                                      |
+                                      |-XREMain::XRE_mainStartup
+                                      |
+                                      |-mScopedXPCOM = MakeUnique<ScopedXPCOMStartup>();
+                                      |
+                                      |-mScopedXPCOM->Initialize();          (toolkit/xre/nsAppRunner.cpp)
+                                      |           |
+                                      |           |-NS_InitXPCOM2                       (xpcom/build/XPCOMInit.cpp)
+                                      |                  |
+                                      |                  |-sMessageLoop = new MessageLoopForUI(MessageLoop::TYPE_MOZILLA_UI);
+                                      |                  |
+                                      |                  |-ioThread = MakeUnique<BrowserProcessSubThread>(BrowserProcessSubThread::IO);
+                                      |                  |-ioThread->StartWithOptions
+                                      |                  |
+                                      |                  |-nsThreadManager::get()->Init();
+                                      |                  |
+                                      |                  |-nsTimerImpl::Startup();
+                                      |                  |
+                                      |                  |-nsComponentManagerImpl::gComponentManager = new nsComponentManagerImpl();
+                                      |                  |
+                                      |                  |-nsCycleCollector_init
+                                      |                  |
+                                      |                  |-nsCycleCollector_startup
+                                      |                  |
+                                      |                  |-JS_Init
+                                      |                  |
+                                      |                  |-nsComponentManagerImpl::gComponentManager->Init();(xpcom/components/nsComponentManager.cpp)
+                                      |                  |     |
+                                      |                  |     |-nsComponentManagerImpl::InitializeStaticModules()
+                                      |                  |     |
+                                      |                  |     |-RegisterModule(...)
+                                      |                  |     |
+                                      |                  |     |-greOmnijar =
+    mozilla::Omnijar::GetReader(mozilla::Omnijar::GRE);
+                                      |                  |     |
+                                      |                  |     |-cl->location.Init(greOmnijar, "chrome.manifest");
+                                      |                  |     |
+                                      |                  |     |-nsComponentManagerImpl::RereadChromeManifests
+                                      |                  |               |
+                                      |                  |               |-nsComponentManagerImpl::RegisterManifest
+                                      |                  |                       |
+                                      |                  |                       |-DoRegisterManifest
+                                      |                  |                                |
+                                      |                  |                                |-ParseManifest
+                                      |                  |                                      |
+                                      |                  |                                      |-...
+                                      |                  |                                      |
+                                      |                  |                                      |-nsComponentManagerImpl::ManifestContract
+                                      |                  |
+                                      |                  |-XPTInterfaceInfoManager::GetSingleton();
+                                      |                  |
+                                      |                  |-nsDirectoryService::gService->RegisterCategoryProviders();
+                                      |                  |
+                                      |                  |-SharedThreadPool::InitStatics();
+                                      |                  |
+                                      |                  |-AbstractThread::InitStatics();
+                                      |                  |
+                                      |                  |-mozilla::scache::StartupCache::GetSingleton();
+                                      |                  |
+                                      |                  |-mozilla::AvailableMemoryTracker::Activate();
+                                      |                  |
+                                      |                  |-NS_CreateServicesFromCategory(...)
+                                      |                  |
+                                      |                  |-mozilla::HangMonitor::Startup();
+                                      |                  |
+                                      |                  |-mozilla::BackgroundHangMonitor::Startup();
+                                      |                  |
+                                      |                  |-sMainHangMonitor = new mozilla::BackgroundHangMonitor
+                                      |
+                                      |-XREMain::XRE_mainRun()
+                                               |
+                                               |-mozilla::ipc::ProcLoaderClientGeckoInit();
+                                               |
+                                               |-mScopedXPCOM->SetWindowCreator(mNativeApp);
+                                               |
+                                               |-startupNotifier->Observe(nullptr, APPSTARTUP_TOPIC, nullptr);
+                                               |
+                                               |-mDirProvider.DoStartup();
+                                               |
+                                               |-cmdLine->Init(...)
+                                               |
+                                               |-obsService->NotifyObservers(cmdLine, "command-line-startup", nullptr);
+                                               |
+                                               |-appStartup->CreateHiddenWindow();
+                                               |
+                                               |-obsService->NotifyObservers(nullptr, "final-ui-startup", nullptr);
+                                               |
+                                               |-cmdLine->Run();     (toolkit/components/commandlines/nsCommandLine.cpp)
+                                               |          |
+                                               |          |- nsCommandLine::EnumerateValidators
+                                               |          |
+                                               |          |-nsCommandLine::EnumerateHandlers
+                                               |                  |
+                                               |                  |-EnumRun
+                                               |                        |
+                                               |                        |-nsICommandLineHandler->Handle   (first page will be loaded in here)
+                                               |
+                                               |-mNativeApp->Enable();
+                                               |
+                                               |-appStartup->Run();     (toolkit/components/startup/nsAppStartup.cpp)
+                                                         |
+                                                         |-mAppShell->Run();         (widget/gonk/nsAppShell.cpp->widget/nsBaseAppShell.cpp)
+                                                                  |
+                                                                  |-MessageLoop::current()->Run();  // run forever~~~~~
+
+
+
+
+https://blog.csdn.net/zembers/article/details/48495627
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+https://blog.csdn.net/zembers/article/details/48495627

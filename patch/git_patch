@@ -1,0 +1,39 @@
+
+一、git push
+
+git fetch kaios
+git checkout -b bug-39690 jio_quoin
+//make some changes
+git add -A
+git commit -m "Bug 39690 -Delivery Report notification is not proper for sent messages. r=Dominic"
+git push -f origin bug-39690:bug-39690
+
+
+Bug 48950 - [CLM_ID - 773666] Inconsistent App name seen, in app tray 'Messages' is mentioned and when the app is opened it shows the header as 'Messages'. r=Weiwei.wu
+
+git checkout -b new jio_quoin
+git cherry-pick commitid
+git push -f origin new:bug-39690
+
+git rebase featruephonemarster
+    
+二、pull fork remote branch
+1. git remote add upstream git@github.com:coreos/etcd.git   //add remote branch upstream if git branch -v
+
+2. git fetch upstream  // get the remote branch new change to local
+
+3. git merge upstream/master  // let remote upstream merge to local
+
+    or
+    1） # git checkout master;  //
+
+    2） # git merge upstream;  //
+
+4. git push            // git push change to github branch
+
+    
+三、git branch
+
+git branch --set-upstream-to=feature-phone/jio Bug-39690
+
+git pull origin Bug-39690

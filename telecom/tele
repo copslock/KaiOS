@@ -1,0 +1,24 @@
+1.app
+  telephony = navigator.telephony
+  telephony.dial
+2.gecko
+  dial -> // gecko/dom/telephony.webidl
+    Telephony::Dial -> // telephony.cpp
+    Telephony::DialInternal -> //
+    mService->Dial -> // mService - nsITelephonyService.idl
+    nsTelephonyService::Dial -> //  vendor nsTelephonyService
+    phone->Dial ->
+      Phone::Dial -> phone.cpp
+      mCallTracker->Dial
+        CallTracker::Dial -> // CallTracker.cpp
+          mRil->Dial -> RIL.cpp
+
+
+
+
+
+
+3.qcril
+  qcril_qmi_voice_request_get_current_atel_calls //qcril_qmi_voice_request_get_current_atel_calls.c
+
+  中国移动chancroid

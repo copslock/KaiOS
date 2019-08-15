@@ -1,0 +1,472 @@
+main
+int main(int argc, char **argv) // /hardware/ril/rild/rild.c
+{
+
+  dlHandle = dlopen(rilLibPath, RTLD_NOW); // 加载库 rilLibPath /system/vendor/lib/libril-qc-qmi-1.so 1
+
+  RIL_startEventLoop();   //启动事件循环，调用eventLoop，后者再调用ril_event.cpp中的ril_event_loop ，ril_event_loop就是进行ril事件管理的核心事件在这里得到处理  
+
+  funcs = rilInit(&s_rilEnv, argc, rilArgv); // 初始化   实际调用的是RIL_Init方法
+
+  static struct RIL_Env s_rilEnv = {
+      RIL_onRequestComplete,
+      RIL_onUnsolicitedResponse,
+      RIL_requestTimedCallback
+  }; // qcril.c可以回调ril的方法
+}
+
+对于高通平台来说，RILC就是QCRIL
+
+
+vendor/qcom/proprietary/qcril/qcril_qmi/qcril.c
+
+RIL_Init ->// init ril
+
+  qmi_ril_set_thread_name( pthread_self() , QMI_RIL_QMI_RILD_THREAD_NAME); //设置线程的名字
+
+  qmi_ril_fw_android_request_flow_control_init();   // flow control 流控制
+
+  qmi_ril_init_android_unsol_resp_pending_list();   // unsol response dispatchable control
+
+  qcril_event_init(); -> //初始化接收Modem消息的EventLoop
+    ret = pthread_create(&qcril_event.tid, &attr, qcril_event_main, NULL); -> //创建EventLoop线程,入口方法为qcril_event_main
+
+      qcril_event_init_list(&qcril_event.list); //初始化qcril_event.list链表  // qcril_event_main
+      ret = pipe(filedes); //创建管道
+      while (qcril_event.started < 2) //阻塞等待qcril初始化
+       {
+         QCRIL_LOG_VERBOSE("Event thread waiting for started == 2 (%d)", qcril_event.started );
+         pthread_cond_wait(&qcril_event_startupCond, &qcril_event.startup_mutex);
+       }
+      for (;;) // for循环读取qmi底层发送的请求
+      {
+      n = select(qcril_event.fdWakeupRead + 1, &rfds, NULL, NULL, NULL);      //阻塞等待接收内容  
+      do //读取qmi内容
+      {
+      ret = read(qcril_event.fdWakeupRead, &buff, sizeof(buff));
+      err_no = qcril_process_event( ev->instance_id, ev->modem_id, ev->event_id, ev->data, ev->datalen, ev->t );  //处理qmi发送的请求
+
+
+    qmi_ril_set_thread_name(qcril_event.tid, QMI_RIL_EVENT_THREAD_NAME);//设置线程的名字为event
+
+    while (qcril_event.started == 0)
+    {
+      pthread_cond_wait(&qcril_event_startupCond, &qcril_event.startup_mutex); //在完成其链表的初始化过程后，通过pthread_cond_wait()将其阻塞，
+    }    //而下面要做的就是取消其阻塞状态，使其进入消息检测循环。这是在qcril_event_start方法中完成的,
+
+
+  qcril_init(c_argc, c_argv); -> // 初始化QCRIL各个模块
+
+    qcril_arb_init();
+    qcril_init_state();
+    qmi_ril_oem_hook_init();
+    qcril_db_init();
+    qcril_init_hash_table(); -> //初始化Event table  最重要的是qcril_event_table表拷贝给qcril_hash_table，用于onRequest时对各种请求进行处理
+      qcril_hash_table[hash_index] = &qcril_event_table[reg_index]; -> //qcril_event_table是一个静态表单, 里面保存了所有RILC中下发请求的ID以及相应的处理函数
+        { QCRIL_REG_ALL_ACTIVE_STATES( RIL_REQUEST_SEND_SMS, qcril_sms_request_send_sms ) } //每一项都包含两个元素：事件ID和处理函数，在处理这些消息时将会根据事件的ID查找并执行相应的处理函数。
+
+    qcril_reqlist_init();
+
+
+  qcril_event_start(); -> // 启动线程
+    qcril_event.started = 2; // 更新状态
+    pthread_cond_broadcast(&qcril_event_startupCond); //释放EventLoop解锁，从而使EventLoop进入循环
+
+
+
+  qmi_ril_initiate_bootup(); -> // start bootup if applicable其他初始化
+    qcril_setup_timed_callback( QCRIL_DEFAULT_INSTANCE_ID, QCRIL_DEFAULT_MODEM_ID, qmi_ril_bootup_perform_core_or_start_polling, NULL, NULL ); -> //qmi_ril_bootup_perform_core_or_start_polling
+      init_res = qmi_ril_core_init(); // 完成qcril客户端的初始化
+
+  return  &qcril_request_api[ QCRIL_DEFAULT_INSTANCE_ID ];//返回接口函数
+//在Qcril的初始化完毕后，将自己的函数列表返回给RilC，也就是qcril_request_api:
+static const RIL_RadioFunctions qcril_request_api[] = {
+  { RIL_VERSION, onRequest_rid, currentState_rid, onSupports_rid, onCancel_rid, getVersion_rid }
+};
+//这样的话，在RIL中调用的接口就会进入该函数列表中进行处理。
+
+2.
+2.1 QMI层消息处理
+当ril有请求过来时，就会调用ril库的onRequest()方法，此时就会根据当前Qcril注册的函数列表
+进入到qcril_request_api的onRequest_rid方法中,因此, onRequest_rid方法是QCRIL中的入口
+  qcril_request_api ->
+    onRequest_rid ->
+      onRequest ->
+        qmi_ril_fw_android_request_render_execution ->
+          qcril_execute_event -> //首先调用qcril_hash_table_lookup方法从表中查找当前的Event，
+            qcril_hash_table_lookup -> // 如果没有找到当前的Request，就认为非法，找到之后，进入qcril_dispatch_event()中派发该Event,
+                                       //The request is not supported  error = (E_NOT_SUPPORTED);
+            qcril_dispatch_event  // /* Dispatch the request to the appropriate handler */
+              (entry_ptr->handler)(params_ptr, &ret) // ret是返回的结果,通过entry_ptr->handler调用当前Event的处理函数。
+                这里的handler对应qcril_hash_table中的某一项。qcril_init_hash_table将qcril_event_table表中的数据拷贝给了qcril_hash_table，所以这里的handler可以理解为qcril_event_table中的某一项。之后的流程就会进入到某个具体请求的处理函数中
+qcril_qmi_voice_request_hangup方法进一步调用qcril_qmi_client_send_msg_async发送到QMI层。
+当然, qcril_qmi_client_send_msg_async是异步处理的, qcril_qmi_client_send_msg_sync是同步处理的。
+最后,这2个方法都会调用qmi_client_send_msg_sync完成发送。
+一些其他的处理方法或者会调用这两个方法发送到QMI层,或者直接调用qmi_client_send_msg_sync发送。
+
+处理函数最终调用
+  qcril_qmi_client_send_msg_async -> //判断我们调用的这个voice的服务类型是否存在于QMI定义的服务列表中，如果不存在，还需要自己添加该service,
+    qmi_client_send_msg_async_with_shm -> // qmi_ril_platform_dep.c 如果存在，执行QMI client端发送消息的接口函数
+      qmi_client_send_msg_async //
+        qmi_client_send_msg_sync //
+          qmi_service_send_msg_sync_millisec //
+同步消息在QMUX层发送到BP侧后，会一直等待BP的响应所以函数的最后一个参数是一个timeout，而异步消息不需要。
+qmi_client_send_msg_sync方法首先计算请求消息的长度和设定返回消息的最大长度，然后对请求消息按QMUX格式进行编码通过函数qmi_service_send_msg_sync_millisec（）发送出去，最后等待BP侧返回的响应，将返回的response进行解码。
+
+
+2.2 QMUX层消息处理
+  qmi_service_send_msg_sync_millisec -> // qmi_service.c 首先去获取一些QMUX层所需要的消息，发送通道的conn_id，QMUX消息格式用到的client_id
+     conn_id = QMI_SRVC_CLIENT_HANDLE_TO_CONN_ID (user_handle);
+     client_id = QMI_SRVC_CLIENT_HANDLE_TO_CLIENT_ID (user_handle);
+       qmi_util_alloc_and_addref_txn (sizeof (qmi_service_txn_info_type),qmi_service_sync_txn_delete,(qmi_txn_hdr_type **) &qmi_service_txn_table[conn_id][book_keep_srvc_id],&qmi_service_txn_mutex_table[conn_id][book_keep_srvc_id]);
+         // -> 然后打包到一个传输消息的结构体 qmi_service_txn_info_type  *txn，这个txn在稍后跟进代码中会发现，就是QMUX消息中的tranciationID
+
+/* Initialize Id fields */
+  txn->conn_id    = conn_id;
+  txn->service_id = service_id;
+  txn->client_id = client_id;
+  txn->msg_id = msg_id;
+  txn->api_flag = api_flag;
+  /* Initialize fields */
+  txn->srvc_txn_info.txn_type = QMI_TXN_SYNC;
+  txn->srvc_txn_info.sync_async.sync.user_reply_buf = NULL;
+  txn->srvc_txn_info.sync_async.sync.user_reply_buf_size = 0;
+  txn->srvc_txn_info.sync_async.sync.rsp_rc = QMI_NO_ERR;
+  txn->srvc_txn_info.sync_async.sync.qmi_err_code = QMI_SERVICE_ERR_NONE
+
+         rc = qmi_service_send_msg -> //这些完成之后,调用qmi_service_send_msg方法发送,该方法会判断服务ID和通道的conn_id是否有效,
+         {
+           if ((int)conn_id >= (int)QMI_MAX_CONN_IDS)
+             {
+               return QMI_INTERNAL_ERR;
+             }
+           if ( qmi_qcci_internal_public_service_id_to_bookkeeping_service_id ( service_id ) >= QMI_MAX_SERVICES)
+             {
+               return QMI_INTERNAL_ERR;
+             }
+         }
+           qmi_service_write_std_srvc_msg_hdr -> // 给发送过来的消息加上message ID和Length，
+                                                 //所以不难猜测，在QMI发送端的接口函数 qmi_client_send_msg_sync（）中编解码的原理是按照QMUX消息中的TLV格式进行编解码。再走到这步加上message ID和Length,整个QMUX SDU中的QMI service message已完成。
+           {
+             unsigned char *tmp_msg_buf;
+
+             /* Back pointer up by 4 bytes */
+             *msg_buf -= QMI_SRVC_STD_MSG_HDR_SIZE;
+             *msg_buf_size += QMI_SRVC_STD_MSG_HDR_SIZE;
+
+             tmp_msg_buf = *msg_buf;
+
+             /* Write the message ID field (16 bits) */
+             WRITE_16_BIT_VAL (tmp_msg_buf,msg_id);
+             /* Write the length field */
+             WRITE_16_BIT_VAL (tmp_msg_buf,length);
+
+            return 0;
+           } //加message ID和Length的方法：消息指针的偏移。指针向前偏移，消息长度增加。
+
+               /* Put TXN ID header on message, and save in txn */
+               txn->txn_id = qmi_service_write_std_txn_hdr_and_inc_txn_id -> //将control flags和tranciation ID加上,完成整个QMUX SDU
+
+                 /* Send to PDU to QMUX.*/
+                 rc = qmi_qmux_if_send_qmi_msg //发送到QMUX层，到这里，整个QMI interface的流程走完
+
+======主要作用：获取上层发送的请求，选择相应的serviceid,conn_id,client id，对消息完成整个QMUX SDU的封装，发送到QMUX。
+
+                 qmi_qmux_if_send_qmi_msg -> //对上层发过来打包好的QMUX SDU完成加QMUX HEADER的工作。添加QMUX header的方法同样是指针偏移。
+                   qmi_qmux_if_send_to_qmux -> // 首先将QMUX header里面的控制位，QMI服务ID，QMI客户端ID打包到结构体hdr，再通过Memcpy完成,
+                   {
+                     /* Set up message for sending */
+                     memset(&hdr, 0, sizeof(qmi_qmux_if_msg_hdr_type));
+
+                     hdr.msg_id = msg_id;
+                     hdr.qmux_client_id = qmux_client_id;
+                     hdr.qmux_txn_id = qmux_txn_id;
+                     hdr.qmi_conn_id = qmi_conn_id;
+                     hdr.qmi_service_id = qmi_service_id;
+                     hdr.qmi_client_id = qmi_client_id;
+                     hdr.control_flags = 0; // Unused for TX to QMUX, only valid for RX
+
+                     /* Decrement msg pointer and increment msg_len */
+                     msg -= QMI_QMUX_IF_HDR_SIZE;
+                     msg_len += (int)QMI_QMUX_IF_HDR_SIZE;
+
+                     /* Copy header into message buffer */
+                     memcpy ((void *)msg, (void *)&hdr, QMI_QMUX_IF_HDR_SIZE);
+                   }  // 到这里整个QMUXMessage完成封装。
+                   rc = QMI_QMUX_IF_PLATFORM_TX_MSG -> //然后会把封装好的QMUXmessage发到下层,通过调用宏QMI_QMUX_IF_PLATFORM_TX_MSG（）
+                     linux_qmi_qmux_if_client_tx_msg -> //
+                       rc = send (client_fd, (void *) msg,(size_t) msg_len,MSG_DONTWAIT | MSG_NOSIGNAL)) //该方法通过socket，将消息发到linux_qmi_qmux_if_server的接口。
+
+========5 底层消息发送
+在 linux_qmi_qmux_if_server.c文件的入口main（）函数，通过一个select来监听所有从linux_qmi_client端发出的socket，通过for循环调用linux_qmi_qmux_if_server_process_client_msg（）
+处理这些监听的消息。进入到函数linux_qmi_qmux_if_server_process_client_msg（）后，通过recv函数将监听的socket的消息写入buf_size这个buffer里面
+
+linux_qmi_qmux_if_server.c
+  main ->
+
+    /* Loop through all client FD's and process any with messages */
+    for (fd = 0; fd <= max_fd; fd++)
+      linux_qmi_qmux_if_server_process_client_msg(fd) -> // 
+        buf_size = recv (fd,(void *)&platform_msg_hdr,QMI_QMUX_IF_PLATFORM_SPECIFIC_HDR_SIZE,0)) <= 0) //通过recv函数将监听的socket的消息写入buf_size这个buffer里面
+           //recv方法在接收socket时，并没有全部接收。而且只接收了platform_msg_hdr。
+           linux_qmi_qmux_if_platform_hdr_type   platform_msg_hdr; 
+           {
+             remaining_bytes = (size_t) platform_msg_hdr.total_msg_size - QMI_QMUX_IF_PLATFORM_SPECIFIC_HDR_SIZE;
+             if ((buf_size = recv (fd,(void *)linux_qmi_qmux_if_rx_buf,remaining_bytes,0)) <= 0)
+           }             //server接收到后，首先会判断从client端发过来的这个消息是否正常，包括client_id和消息长度。
+                         //如果client_id匹配不上 或时消息长度溢出，都会将消息丢弃，不会发送。
+
+           /* Message looks good... read in and process as normal */
+           {
+             remaining_bytes = (size_t) platform_msg_hdr.total_msg_size - QMI_QMUX_IF_PLATFORM_SPECIFIC_HDR_SIZE;
+             if ((buf_size = recv (fd,(void *)linux_qmi_qmux_if_rx_buf,remaining_bytes,0)) <= 0)
+           } //如果判断消息没问题，就会将其余的消息（除去platform_msg_hdr）再次通过recv()函数从socket中接受，放到remaining_bytes这个buffer中，
+
+             /* Process message */
+             qmi_qmux_tx_msg (linux_qmi_qmux_if_client_id_array[fd].clnt_id,linux_qmi_qmux_if_rx_buf,(int)remaining_bytes); //用qmi_qmux_tx_msg方法继续处理。
+
+               /* Advance msg pointer and decrement msg_len */
+               msg += QMI_QMUX_IF_HDR_SIZE;
+               msg_len -= (int)QMI_QMUX_IF_HDR_SIZE; //在qmi_qmux_tx_msg（）函数中，又会对之前打包好的QMUX消息进行去头，拆分。
+
+                       rc = qmi_qmux_tx_to_modem( msg_hdr.qmi_conn_id,msg_hdr.qmi_service_id,msg_hdr.qmi_client_id,msg,msg_len );
+                       // 判断QMUX header中的message_id,如果是QMI_MSG，则会调用函数qmi_qmux_tx_to_modem（），
+
+                         qmi_qmux_tx_to_modem//对QMUX整个控制信道消息的头进行一个重组，包括I/F Type。完成QMI整个control channel message的构建。
+                           {
+                               /* I/F type is 1 for a QMUX message */
+                               WRITE_8_BIT_VAL (tmp_msg_ptr, 1);
+
+                               /* Length is length of message to send which includes the QMUX header, but since
+                                ** QMI_QMUX_HDR_SIZE includes the I/F byte and the length field in a QMUX
+                                ** message doesn't include this, we need to subtract 1
+                               */
+                                WRITE_16_BIT_VAL (tmp_msg_ptr, (msg_len - 1));
+
+                               /* Control flags byte should be set to 0 for control point */
+                               WRITE_8_BIT_VAL (tmp_msg_ptr, 0);
+
+                               /* Now put in service type and client ID */
+                               WRITE_8_BIT_VAL (tmp_msg_ptr, service_id);
+                               WRITE_8_BIT_VAL (tmp_msg_ptr, client_id);
+                           }
+
+                            rc = QMI_QMUX_IO_PLATFORM_SEND_QMI_MSG (conn_id, msg_ptr, (int) msg_len);//然后通过宏调用ARM侧进入共享内存和BP侧交互的IO口函数
+
+                              /* These macros are used in QMUX */
+                              linux_qmi_qmux_io_send_qmi_msg //共享内存和BP侧交互的IO口函数
+
+                                  /* Send to proper SMD port... no need to have any mutex here... writing will be
+                                   ** made serial by above layer
+                                   */
+                                  ret = write(conn_info->f_desc, (void*) msg_ptr, (size_t)msg_len); //判断如果当前AP侧和BP侧的连接通道是激活状态的话，就通过write函数，将打包好的QMI消息，写入连接通道信息里面的f_desc参数,
+
+=========================到此，整个ARM流程结束。
+以上主要介绍AP侧要发送一个请求到BP侧，QMI是怎么对请求进行编码成QMUX消息，怎么将编码后的QMUX消息加头组合成一种AP和BP可共同识别的消息格式，
+最后是怎么发送到BP侧的。
+https://blog.csdn.net/u012439416/article/category/7004974
+
+
+
+
+
+1.
+  RIL::Send // RIL.cpp
+    RilRequest //
+      SocketId // SOCKETID_RILD
+        RilSender //    default: mSocket = ril->mRildSocket; -RILD_SOCKET_NAME, "rild"
+
+  init.rc
+    service ril-daemon /system/bin/rild
+    class main
+    socket rild stream 660 root radio
+    socket sap_uim_socket1 stream 660 bluetooth bluetooth
+    socket rild-debug stream 660 radio system
+    user root
+    group radio cache inet misc audio log qcom_diag
+
+  main -> //  rild.c
+    dlHandle = dlopen(rilLibPath, RTLD_NOW); //打开底层动态链接库待用，这里rilLibPath由系统属性"rild.libpath"得来的 
+                                             // rilLibPath:/system/lib/libril-qc-qmi-1.so, 使用高通的qmi实现和modem通信
+
+
+    RIL_startEventLoop(); //启动事件循环，调用eventLoop，后者再调用ril_event.cpp中的ril_event_loop
+                          //ril_event_loop就是进行ril事件管理的核心事件在这里得到处理  
+
+
+    rilInit = (const RIL_RadioFunctions *(*)(const struct RIL_Env *, int, char **))dlsym(dlHandle, "RIL_Init"); 
+                          //从动态库中获取要执行的函数此处即为qcril中的RIL_Init();
+
+    funcs_inst[0] = rilInit(&s_rilEnv, argc, s_argv);
+                         //给qcril传入回调函数集s_rilEnv（onRequestComplete等见结构体 RIL_Env），并获取继续往qcril调用的函数集RIL_RadioFunctions（onRequest等）
+
+    RIL_register(funcs_inst, i);  //注册客户端事件处理接口（也就是onRequest等），并创建socket监听事件
+
+注意：
+//onRequestComplete等由ril.cpp实现，供qcril.cpp调用；onRequest由qcril.cpp实现，供ril.cpp调用
+//RIL_Init()由qcril实现；RIL_Register()由ril.cpp实现
+
+//RIL_RadioFunctions在qcril.cpp的对应关系：
+static const RIL_RadioFunctions qcril_request_api[ QCRIL_MAX_INSTANCE_ID ] = {
+  { RIL_VERSION, onRequest_rid0, currentState_rid0, onSupports_rid0, onCancel_rid0, getVersion_rid0 }
+};//见qcril.cpp
+
+typedef struct {
+    int version;        /* set to RIL_VERSION */
+    RIL_RequestFunc onRequest;
+    RIL_RadioStateRequest onStateRequest;
+    RIL_Supports supports;
+    RIL_Cancel onCancel;
+    RIL_GetVersion getVersion;
+} RIL_RadioFunctions;  //见ril.h
+
+
+    RIL_register { // ril.cpp
+      
+      memcpy(&s_callbacks[client_id], callbacks, sizeof (RIL_RadioFunctions));    //将客户端事件处理接口RIL_RadioFunctions拷贝到数组s_callbacks中，以备后用(各种dispatch函数会调用）
+
+      s_fdListen = android_get_control_socket(RIL_getRilSocketName()); //即rild
+      ret = listen(s_fdListen, 4); //第二个参数为最多监听事件列表
+
+      ril_event_set (&s_listen_event, s_fdListen, true, listenCallback, NULL);  //初始化事件s_listen_event 监听和处理客户端请求
+
+      rilEventAddWakeup (&s_listen_event);  //将s_listen_event事件加入到watch_table队列中 唤醒事件处理线程
+
+    }
+
+      static void rilEventAddWakeup(struct ril_event *ev) {
+        ril_event_add(ev);//将s_listen_event事件加入到watch_table队列
+        triggerEvLoop();//这个函数暂时还没搞懂：唤醒事件处理线程
+      }
+
+        ril_event_set
+          ev->func = func; // func:listenCallback
+
+        ril_event_add 
+
+            FD_SET(ev->fd, &readFds);
+
+            //readFds定义：static fd_set readFds;
+            //struct fd_set一个存放文件描述符(file descriptor)，即文件句柄的聚合管道，文件句柄就是被加入到此集合当中。
+            //这个文件句柄集合 就是用selecet函数进行监听，一旦文件句柄任一有变化，select就会读取相关变化的值，并返回。
+
+        ril_event_loop {
+          for (;;) {
+            memcpy(&rfds, &readFds, sizeof(fd_set));        // make local copy of read fd_set
+
+            n = select(nfds, &rfds, NULL, NULL, ptv); //select函数是事件管理的核心，监听rfds内某一文件描述符上是否有数据可读，该函数非阻塞，即使没监听到，也会立即返回 
+
+            printReadies(&rfds);
+
+            processTimeouts();        // Check for timeouts，将过时事件移到pending_list中
+
+            processReadReadies(&rfds, n);        //处理watch_table中触发事件n(假设存在) 将其移到pending_list中
+ 
+            // Fire away
+            firePending();
+          }
+        }
+
+
+        firePending 
+　      　　　ev->func(ev->fd, 0, ev->param);　//执行事件处理函数，这里的ev->func就是上文中RIL_register中的listenCallback
+
+//再回到ril.cpp中
+//从前面可以看到创建了事件，事件在被移动到待执行列表pending_list后，将在线程循环结构中得到处理，
+
+调用事件的回调处理函数，有如下事件：
+　　ril_event   s_wakeupfd_event; 　　//清空用于唤醒管道数据
+　　ril_event   s_listen_event; 　　  //接收客户端socket请求-->重点 对应 listenCallback
+　　ril_event   s_debug_event; 　　   //用于调试
+　　ril_event   s_commands_event; 　  //执行客户端请求-->重点 对应 processCommandsCallback
+
+         listenCallback ->// ril.cpp
+           fdCommand = accept(fd, (sockaddr *) &peeraddr, &socklen);//监听socket连接，与上文中RIL_register里的listen形成对应
+         　　err = getsockopt(fd, SOL_SOCKET, SO_PEERCRED, &creds, &szCreds);　　//判断是否是PHONE_PROCESS 连接 否则返回
+         　　pwd = getpwuid(creds.uid);
+         　　if (strcmp(pwd->pw_name, PHONE_PROCESS) == 0) {
+　　          　　is_phone_socket = 1;
+　           　}
+
+　        　p_rsInfo = new RecordStreamInfo();
+        　　p_rsInfo->p_rs = record_stream_new(fd, MAX_COMMAND_BYTES);
+　        　p_record = (char *)malloc(sizeof(char) * SUB_DATA_LENGTH);　　// 创建RecordStream数据结构record_stream.c
+
+       　　ret = read(fd, p_record, SUB_DATA_LENGTH);//从socket中读取数据
+
+　　       s_fdCommand[p_rsInfo->client_id] = fd;　　
+
+
+       　　ril_event_set (&s_commands_event[client_id], s_fdCommand[client_id], 1, processCommandsCallback, p_rsInfo);
+       　　rilEventAddWakeup (&s_commands_event[p_rsInfo->client_id]);　　//创建事件s_commands_event，继续处理socket请求，再次进入事件循环
+
+
+       　　onNewCommandConnect(p_rsInfo->client_id);     　　//通知客户端已建立连接
+
+
+
+           processCommandsCallback //ril.cpp
+
+         　　　　processCommandBuffer(p_record, recordlen, p_rsInfo->client_id);//这里
+
+               static int processCommandBuffer(void *buffer, size_t buflen, int client_id) {
+               　　p.setData((uint8_t *) buffer, buflen);         　　//将数据转化成Parcel类型
+
+　               　status = p.readInt32(&request);　　// 读取请求的标识
+
+               　　status = p.readInt32(&token);
+　               　pRI = (RequestInfo *)calloc(1, sizeof(RequestInfo));　　//将数据请求转化成RequestInfo类型 
+
+               　　pRI->pCI = &(s_commands[request]);        //初始化RequestInfo根据request在数组s_commands查询获取客户端请求处理接口 CommandInfoCommandInfo保存着对应的dispatch函数
+
+               　　pRI->token = token;
+               　　pRI->client_id = client_id;
+　               　pRI->p_next = s_pendingRequests;　　
+
+               　　s_pendingRequests = pRI;       //
+
+　               　pRI->pCI->dispatchFunction(p, pRI); //调用请求对应的处理函数 执行对应的dispatch函数，如打电话时是dispatchDial
+               　　return 0;
+                }
+                //客户端传来的请求都对应着相应的请求标识号，通过该标识号查询每一个客户端请求RequestInfo对应着 处理和响应接口信息CommandInfo 查询是通过s_commands数组进行的。
+
+
+                /** Index == requestNumber */
+                 static CommandInfo s_commands[] = {
+                 #include "ril_commands.h"
+                };
+
+                  static void 以打电话为例
+                  dispatchDial (Parcel &p, RequestInfo *pRI) {
+                    ......
+                    CALL_ONREQUEST
+                    s_callbacks[pRI->client_id].onRequest(pRI->pCI->requestNumber, &dial, sizeOfDial, pRI);  //从这里进入qcril!!!!!!!!!!!!!
+                    ......
+                   }
+
+如前所述，ril.cpp中的onRequest对应qcril.cpp中的onRequest_rid0；onRequest_rid0间接调用onRequest
+再往下就到这里了：/local/bl1.1-1124/vendor/qcom/proprietary/qcril/qcril_fusion/qcril.c
+
+一些总结：
+需要掌握socket通信的最基本知识（文件描述符fd，listen()， select()， accept()）;
+因为ril请求有很多种（100以上），为了减少程序的分支，作者使用了消息数组s_commands[]完成消息的映射，并保存了对应的处理函数dispatchxxx;
+还 有一个重点就是这里的事件管理机制，总共维护了三个事件列表：watch_list、 timer_list、 pending_list, 事件来了之后都是先到watchlist里，触发之后到pendinglist，然后再进行处理，timerlist没研究，应该是超时处理。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

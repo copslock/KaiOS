@@ -1,0 +1,6 @@
+webidl:
+一.url
+  https://developer.mozilla.org/zh-CN/docs/Mozilla/WebIDL_bindings
+二.interface
+所有的WebIDL文件都放在dom/webidl目录下，并且会被加入到moz.build文件的列表中。
+配置文件dom/bindings/Bindings.conf，是一个Python词典，它是接口名和接口描述之间的一个映射。
